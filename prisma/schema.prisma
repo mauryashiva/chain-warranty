@@ -1,0 +1,239 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+//////////////////////////////////////////////////////
+// 👤 USER + WALLET SYSTEM
+//////////////////////////////////////////////////////
+
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  isDeleted Boolean  @default(false)
+
+  wallets    Wallet[]
+  claims     Claim[]
+  warranties WarrantyOwnership[]
+
+  sentTransfers     Transfer[] @relation("FromUser")
+  receivedTransfers Transfer[] @relation("ToUser")
+
+  @@index([createdAt])
+}
+
+model Wallet {
+  id        String   @id @default(cuid())
+  address   String
+  userId    String
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([address])
+  @@unique([userId, address]) // 🔥 Prevent duplicate wallet per user
+  @@index([address])
+}
+
+//////////////////////////////////////////////////////
+// 🏢 COMPANY / BRAND SYSTEM
+//////////////////////////////////////////////////////
+
+model Company {
+  id        String   @id @default(cuid())
+  name      String
+  website   String?
+  createdAt DateTime @default(now())
+  isDeleted Boolean  @default(false)
+
+  products  Product[]
+}
+
+//////////////////////////////////////////////////////
+// 📦 PRODUCT SYSTEM
+//////////////////////////////////////////////////////
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  companyId   String
+  createdAt   DateTime @default(now())
+  isDeleted   Boolean  @default(false)
+
+  company     Company  @relation(fields: [companyId], references: [id])
+  warranties  Warranty[]
+
+  @@index([companyId])
+}
+
+//////////////////////////////////////////////////////
+// 🧾 WARRANTY CORE (BLOCKCHAIN LINKED)
+//////////////////////////////////////////////////////
+
+model Warranty {
+  id              String   @id @default(cuid())
+  tokenId         String   @unique
+  contractAddress String
+
+  productId       String
+
+  purchaseDate    DateTime
+  expiryDate      DateTime
+
+  status          WarrantyStatus @default(ACTIVE)
+  qrCodeUrl       String?
+
+  createdAt       DateTime @default(now())
+  isDeleted       Boolean  @default(false)
+
+  product         Product @relation(fields: [productId], references: [id])
+
+  ownerships      WarrantyOwnership[]
+  claims          Claim[]
+  events          WarrantyEvent[]
+  transfers       Transfer[]
+
+  @@index([tokenId])
+  @@index([contractAddress])
+}
+
+//////////////////////////////////////////////////////
+// 👑 OWNERSHIP SYSTEM
+//////////////////////////////////////////////////////
+
+model WarrantyOwnership {
+  id          String   @id @default(cuid())
+  warrantyId  String
+  userId      String
+
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  warranty    Warranty @relation(fields: [warrantyId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([warrantyId])
+  @@index([userId])
+  @@unique([warrantyId, userId])
+}
+
+//////////////////////////////////////////////////////
+// 🔁 TRANSFER HISTORY
+//////////////////////////////////////////////////////
+
+model Transfer {
+  id          String   @id @default(cuid())
+  warrantyId  String
+
+  fromUserId  String
+  toUserId    String
+
+  txHash      String
+
+  createdAt   DateTime @default(now())
+
+  warranty    Warranty @relation(fields: [warrantyId], references: [id])
+  fromUser    User     @relation("FromUser", fields: [fromUserId], references: [id])
+  toUser      User     @relation("ToUser", fields: [toUserId], references: [id])
+
+  @@index([warrantyId])
+  @@index([txHash])
+}
+
+//////////////////////////////////////////////////////
+// 🧾 CLAIM SYSTEM
+//////////////////////////////////////////////////////
+
+model Claim {
+  id          String   @id @default(cuid())
+  warrantyId  String
+  userId      String
+
+  type        ClaimType
+  status      ClaimStatus
+
+  reason      String?
+
+  fraudScore  Float?
+  isFraud     Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+
+  warranty    Warranty @relation(fields: [warrantyId], references: [id])
+  user        User     @relation(fields: [userId], references: [id])
+
+  logs        ClaimLog[]
+
+  @@index([warrantyId])
+  @@index([userId])
+}
+
+//////////////////////////////////////////////////////
+// 📜 CLAIM HISTORY
+//////////////////////////////////////////////////////
+
+model ClaimLog {
+  id        String   @id @default(cuid())
+  claimId   String
+
+  status    ClaimStatus
+  note      String?
+
+  createdAt DateTime @default(now())
+
+  claim     Claim @relation(fields: [claimId], references: [id])
+}
+
+//////////////////////////////////////////////////////
+// 📡 EVENT SYSTEM
+//////////////////////////////////////////////////////
+
+model WarrantyEvent {
+  id          String   @id @default(cuid())
+  warrantyId  String
+
+  type        EventType
+  txHash      String?
+  metadata    Json?
+
+  createdAt   DateTime @default(now())
+
+  warranty    Warranty @relation(fields: [warrantyId], references: [id])
+
+  @@index([warrantyId])
+}
+
+//////////////////////////////////////////////////////
+// 🧾 ENUMS
+//////////////////////////////////////////////////////
+
+enum ClaimStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ClaimType {
+  REPAIR
+  REPLACEMENT
+  REFUND
+}
+
+enum EventType {
+  CREATED
+  TRANSFERRED
+  CLAIMED
+  APPROVED
+  REJECTED
+}
+
+enum WarrantyStatus {
+  ACTIVE
+  EXPIRED
+  VOID
+}
