@@ -56,8 +56,22 @@ export const warrantyService = {
     return prisma.warranty.findMany({
       include: {
         product: true,
-        ownerships: true,
+        ownerships: {
+          include: {
+            user: true,
+          },
+        },
         claims: true,
+        transfers: {
+          include: {
+            fromUser: true,
+            toUser: true,
+          },
+        },
+        events: {
+          orderBy: { createdAt: "desc" },
+          take: 10,
+        },
       },
     });
   },

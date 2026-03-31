@@ -1,0 +1,54 @@
+"use client";
+
+import ThemeToggle from "@/components/theme/ThemeToggle";
+import { Search, Bell } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+export default function Topbar() {
+  return (
+    <div className="flex h-full items-center justify-between px-8 bg-white border-b-2 border-gray-100 dark:border-neutral-900 backdrop-blur-md dark:bg-black">
+      {/* Search Section */}
+      <div className="relative flex w-full max-w-md items-center group">
+        <Search
+          size={18}
+          strokeWidth={3}
+          className="absolute left-3.5 text-slate-950 transition-colors group-focus-within:text-blue-600 dark:text-white"
+        />
+        <input
+          placeholder="Search for warranties or transactions..."
+          className="h-11 w-full rounded-xl border-2 border-gray-200 bg-slate-50 pl-11 pr-4 text-sm font-black text-slate-950 outline-none transition-all placeholder:text-slate-500 focus:border-blue-600 focus:bg-white focus:ring-4 focus:ring-blue-500/10 dark:border-neutral-800 dark:bg-neutral-900/50 dark:text-white dark:placeholder:text-neutral-500 dark:focus:border-blue-500 dark:focus:bg-black"
+        />
+        <div className="absolute right-3 hidden items-center gap-1 sm:flex">
+          <kbd className="pointer-events-none h-6 select-none items-center gap-1 rounded border-2 border-gray-300 bg-white px-2 font-mono text-[10px] font-black text-slate-950 dark:border-neutral-700 dark:bg-neutral-800 dark:text-white">
+            ⌘K
+          </kbd>
+        </div>
+      </div>
+
+      {/* Right Section */}
+      <div className="flex items-center gap-6">
+        {/* Status Badge - Higher Visibility */}
+        <div className="hidden items-center gap-2 rounded-full border-2 border-emerald-200 bg-emerald-50 px-4 py-2 dark:border-emerald-500/30 dark:bg-emerald-500/10 md:flex">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75"></span>
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-600"></span>
+          </span>
+          <span className="text-[11px] font-black uppercase tracking-widest text-emerald-800 dark:text-emerald-400">
+            Network Connected
+          </span>
+        </div>
+
+        {/* Action Icons */}
+        <div className="flex items-center gap-4 border-l-2 border-gray-100 pl-6 dark:border-neutral-900">
+          <div className="scale-110">
+            <ThemeToggle />
+          </div>
+          <button className="relative flex h-10 w-10 items-center justify-center rounded-xl border-2 border-transparent text-slate-950 transition-all hover:bg-slate-100 hover:border-slate-200 dark:text-white dark:hover:bg-neutral-900 dark:hover:border-neutral-800">
+            <Bell size={20} strokeWidth={2.5} />
+            <span className="absolute top-2 right-2 h-3 w-3 rounded-full border-2 border-white bg-blue-600 shadow-sm dark:border-black"></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
