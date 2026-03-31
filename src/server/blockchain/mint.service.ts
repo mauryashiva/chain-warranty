@@ -1,13 +1,11 @@
 import { getContract } from "./contract";
 
 export const blockchainService = {
+  // 🔥 MINT NFT
   async mintWarranty(walletAddress: string) {
     const contract = getContract();
 
-    // 1. Send the transaction
     const tx = await contract.mint(walletAddress);
-
-    // 2. Wait for confirmation
     const receipt = await tx.wait();
 
     if (!receipt) {
@@ -16,8 +14,7 @@ export const blockchainService = {
 
     let tokenId: string | null = null;
 
-    // 3. Robust Event Parsing
-    // We look specifically for the 'Transfer' event from our contract
+    // 🔥 Extract tokenId from Transfer event
     for (const log of receipt.logs) {
       try {
         const parsedLog = contract.interface.parseLog({
@@ -26,13 +23,10 @@ export const blockchainService = {
         });
 
         if (parsedLog && parsedLog.name === "Transfer") {
-          // In ERC721, Transfer args are (from, to, tokenId)
-          // parsedLog.args[2] is the tokenId
           tokenId = parsedLog.args.tokenId.toString();
           break;
         }
-      } catch (e) {
-        // Log doesn't belong to this contract/interface, skip it
+      } catch {
         continue;
       }
     }
@@ -43,6 +37,27 @@ export const blockchainService = {
 
     return {
       tokenId,
+      txHash: receipt.hash,
+    };
+  },
+
+  // 🔥 TRANSFER NFT (NEW)
+  async transferWarranty(
+    fromWallet: string,
+    toWallet: string,
+    tokenId: string,
+  ) {
+    const contract = getContract();
+
+    const tx = await contract.transferWarranty(fromWallet, toWallet, tokenId);
+
+    const receipt = await tx.wait();
+
+    if (!receipt) {
+      throw new Error("Transfer failed: No receipt found");
+    }
+
+    return {
       txHash: receipt.hash,
     };
   },

@@ -1,6 +1,7 @@
 import { prisma } from "@/server/db/prisma";
 
 export const ownershipService = {
+  // 🔥 Assign first owner (after mint)
   async assignOwnership(warrantyId: string, userId: string) {
     return prisma.warrantyOwnership.create({
       data: {
@@ -11,13 +12,27 @@ export const ownershipService = {
     });
   },
 
+  // 🔥 Transfer ownership (MAIN LOGIC)
   async transferOwnership(
     warrantyId: string,
     fromUserId: string,
     toUserId: string,
     txHash: string,
   ) {
-    // Deactivate old ownership
+    // 🔒 Safety check — ensure current owner exists
+    const currentOwner = await prisma.warrantyOwnership.findFirst({
+      where: {
+        warrantyId,
+        userId: fromUserId,
+        isActive: true,
+      },
+    });
+
+    if (!currentOwner) {
+      throw new Error("Transfer failed: Current owner not found");
+    }
+
+    // 🔥 Deactivate old ownership
     await prisma.warrantyOwnership.updateMany({
       where: {
         warrantyId,
@@ -29,7 +44,7 @@ export const ownershipService = {
       },
     });
 
-    // Create new ownership
+    // 🔥 Create new ownership
     const newOwnership = await prisma.warrantyOwnership.create({
       data: {
         warrantyId,
@@ -38,7 +53,7 @@ export const ownershipService = {
       },
     });
 
-    // Save transfer record
+    // 🔥 Save transfer history
     await prisma.transfer.create({
       data: {
         warrantyId,
