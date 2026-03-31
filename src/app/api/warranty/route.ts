@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import {
   createWarranty,
   getAllWarranties,
+  transferWarranty, // 🔥 Import the new controller function
 } from "@/server/controllers/warranty.controller";
 
 /**
  * POST: Handles creating a warranty and assigning ownership.
- * Internally calls the controller which manages the wallet/user logic.
  */
 export async function POST(req: Request) {
   try {
@@ -22,7 +22,6 @@ export async function POST(req: Request) {
 
 /**
  * GET: Retrieves all warranties.
- * The controller handles the Prisma findMany logic with includes.
  */
 export async function GET() {
   try {
@@ -31,6 +30,22 @@ export async function GET() {
     console.error("GET Warranties Error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to fetch warranties" },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * 🔥 NEW: PATCH: Handles transferring warranty ownership.
+ * We use PATCH here because we are updating an existing warranty's state.
+ */
+export async function PATCH(req: Request) {
+  try {
+    return await transferWarranty(req);
+  } catch (error) {
+    console.error("PATCH Warranty Transfer Error:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to transfer warranty" },
       { status: 500 },
     );
   }

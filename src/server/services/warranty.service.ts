@@ -12,6 +12,12 @@ type CreateWarrantyInput = {
   walletAddress: string; // required for mint
 };
 
+type TransferWarrantyInput = {
+  warrantyId: string;
+  fromUserId: string;
+  toUserId: string;
+};
+
 export const warrantyService = {
   async create(data: CreateWarrantyInput) {
     // 🔥 STEP 0 — CHECK IF PRODUCT EXISTS (NEW)
@@ -48,6 +54,58 @@ export const warrantyService = {
 
     return {
       warranty,
+      txHash: blockchain.txHash,
+    };
+  },
+
+  /**
+   * 🔥 NEW: Transfer Ownership Orchestration
+   */
+  async transfer(data: TransferWarrantyInput) {
+    // 1. Fetch Warranty and Wallet details
+    const warranty = await prisma.warranty.findUnique({
+      where: { id: data.warrantyId },
+      include: {
+        ownerships: {
+          where: { userId: data.fromUserId, isActive: true },
+        },
+      },
+    });
+
+    if (!warranty || warranty.ownerships.length === 0) {
+      throw new Error("Warranty not found or user is not the current owner");
+    }
+
+    // 2. Get Wallet addresses for blockchain call
+    const fromWallet = await prisma.wallet.findFirst({
+      where: { userId: data.fromUserId },
+    });
+    const toWallet = await prisma.wallet.findFirst({
+      where: { userId: data.toUserId },
+    });
+
+    if (!fromWallet || !toWallet) {
+      throw new Error("Source or destination wallet not found in database");
+    }
+
+    // 3. Perform Blockchain Transfer
+    const blockchain = await blockchainService.transferWarranty(
+      fromWallet.address,
+      toWallet.address,
+      warranty.tokenId,
+    );
+
+    // 4. Update Database State (Ownership records + Transfer log)
+    const updatedOwnership = await ownershipService.transferOwnership(
+      data.warrantyId,
+      data.fromUserId,
+      data.toUserId,
+      blockchain.txHash,
+    );
+
+    return {
+      success: true,
+      newOwnership: updatedOwnership,
       txHash: blockchain.txHash,
     };
   },
