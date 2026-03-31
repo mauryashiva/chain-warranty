@@ -1,6 +1,21 @@
-// src/server/blockchain/abi.ts
-
 export const ABI = [
+  // Event needed for parsing logs!
+  {
+    anonymous: false,
+    inputs: [
+      { indexed: true, internalType: "address", name: "from", type: "address" },
+      { indexed: true, internalType: "address", name: "to", type: "address" },
+      {
+        indexed: true,
+        internalType: "uint256",
+        name: "tokenId",
+        type: "uint256",
+      },
+    ],
+    name: "Transfer",
+    type: "event",
+  },
+  // Functions
   {
     inputs: [{ internalType: "address", name: "to", type: "address" }],
     name: "mint",

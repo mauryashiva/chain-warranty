@@ -14,6 +14,17 @@ type CreateWarrantyInput = {
 
 export const warrantyService = {
   async create(data: CreateWarrantyInput) {
+    // 🔥 STEP 0 — CHECK IF PRODUCT EXISTS (NEW)
+    const productExists = await prisma.product.findUnique({
+      where: { id: data.productId },
+    });
+
+    if (!productExists) {
+      throw new Error(
+        `Product with ID ${data.productId} does not exist. Create the product first!`,
+      );
+    }
+
     // 🔥 STEP 1 — Mint NFT
     const blockchain = await blockchainService.mintWarranty(data.walletAddress);
 
