@@ -1,22 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import {
   ShieldCheck,
-  ShieldAlert,
   Plus,
   Laptop,
   Smartphone,
   Headphones,
   Watch,
   Loader2,
-  CheckCircle2,
-  XCircle,
   QrCode,
   X,
+  Copy,
+  Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { QRCodeSVG } from "qrcode.react";
+import { QRCodeCanvas } from "qrcode.react"; // Switched to Canvas for copying support
 
 type WarrantyListProps = {
   warranties: Array<{
@@ -36,7 +35,35 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
   const [results, setResults] = useState<
     Record<string, "valid" | "invalid" | null>
   >({});
-  const [selectedQr, setSelectedQr] = useState<string | null>(null); // For QR Popup
+  const [selectedQr, setSelectedQr] = useState<string | null>(null);
+  const [isCopying, setIsCopying] = useState(false);
+
+  // --- Refs ---
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // --- Logic: Copy QR Code ---
+  const handleCopyQr = async () => {
+    if (!canvasRef.current) return;
+
+    try {
+      setIsCopying(true);
+      const canvas = canvasRef.current;
+
+      canvas.toBlob(async (blob) => {
+        if (!blob) return;
+        const item = new ClipboardItem({ "image/png": blob });
+        await navigator.clipboard.write([item]);
+
+        // Visual feedback
+        setTimeout(() => {
+          setIsCopying(false);
+        }, 2000);
+      }, "image/png");
+    } catch (err) {
+      console.error("Failed to copy image", err);
+      setIsCopying(false);
+    }
+  };
 
   // --- Verification Logic ---
   const handleVerify = async (tokenId: string) => {
@@ -152,7 +179,6 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      {/* QR Generate Button */}
                       <button
                         onClick={() => setSelectedQr(w.tokenId)}
                         className="p-2 rounded-lg border-2 border-slate-200 text-slate-950 hover:bg-slate-100 transition-all dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-900"
@@ -161,7 +187,6 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
                         <QrCode size={14} strokeWidth={2.5} />
                       </button>
 
-                      {/* Verify Button */}
                       <button
                         onClick={() => handleVerify(w.tokenId)}
                         disabled={isLoading}
@@ -199,7 +224,7 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
 
       {/* --- QR MODAL POPUP --- */}
       {selectedQr && (
-        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="relative w-full max-w-sm rounded-3xl bg-white p-8 shadow-2xl dark:bg-neutral-900 animate-in zoom-in-95 duration-200">
             <button
               onClick={() => setSelectedQr(null)}
@@ -219,9 +244,10 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
                 Scan to verify Token #{selectedQr}
               </p>
 
-              {/* The Actual QR Code */}
+              {/* The Actual QR Code Canvas */}
               <div className="rounded-2xl border-4 border-slate-50 bg-white p-4 shadow-inner dark:border-neutral-800">
-                <QRCodeSVG
+                <QRCodeCanvas
+                  ref={canvasRef}
                   value={selectedQr}
                   size={180}
                   level="H"
@@ -229,9 +255,30 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
                 />
               </div>
 
+              {/* Copy Image Button */}
+              <button
+                onClick={handleCopyQr}
+                className={cn(
+                  "mt-6 flex items-center gap-2 text-sm font-black transition-all",
+                  isCopying
+                    ? "text-emerald-600"
+                    : "text-blue-600 hover:text-blue-700",
+                )}
+              >
+                {isCopying ? (
+                  <>
+                    <Check size={16} strokeWidth={3} /> Copied to Clipboard!
+                  </>
+                ) : (
+                  <>
+                    <Copy size={16} strokeWidth={3} /> Copy QR as Image
+                  </>
+                )}
+              </button>
+
               <button
                 onClick={() => setSelectedQr(null)}
-                className="mt-8 w-full rounded-xl bg-slate-950 py-3 text-sm font-black text-white hover:bg-black dark:bg-white dark:text-black"
+                className="mt-6 w-full rounded-xl bg-slate-950 py-3 text-sm font-black text-white hover:bg-black dark:bg-white dark:text-black"
               >
                 DONE
               </button>
