@@ -15,7 +15,7 @@ import {
   Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { QRCodeCanvas } from "qrcode.react"; // Switched to Canvas for copying support
+import { QRCodeCanvas } from "qrcode.react";
 
 type WarrantyListProps = {
   warranties: Array<{
@@ -54,7 +54,6 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
         const item = new ClipboardItem({ "image/png": blob });
         await navigator.clipboard.write([item]);
 
-        // Visual feedback
         setTimeout(() => {
           setIsCopying(false);
         }, 2000);
@@ -96,9 +95,9 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
   };
 
   return (
-    <div className="rounded-2xl border-2 border-gray-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-black overflow-hidden">
+    <div className="rounded-2xl border-2 border-gray-300 bg-gray-200 shadow-sm dark:border-neutral-800 dark:bg-black overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between border-b-2 border-gray-100 px-6 py-5 dark:border-neutral-900">
+      <div className="flex items-center justify-between border-b-2 border-gray-300 px-6 py-5 dark:border-neutral-900">
         <h2 className="text-xl font-black text-slate-950 dark:text-white">
           My Warranties
         </h2>
@@ -111,28 +110,28 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
       <div className="w-full overflow-x-auto">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="border-b-2 border-gray-50 bg-slate-50/50 dark:border-neutral-900 dark:bg-neutral-900/30">
-              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-neutral-500">
+            <tr className="border-b-2 border-gray-300 bg-gray-300/50 dark:border-neutral-900 dark:bg-neutral-900/30">
+              <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-800 dark:text-neutral-400">
                 Product
               </th>
-              <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-neutral-500">
+              <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-gray-800 dark:text-neutral-400">
                 Token ID
               </th>
-              <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-neutral-500">
+              <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-gray-800 dark:text-neutral-400">
                 Purchase Date
               </th>
-              <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-neutral-500">
+              <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-gray-800 dark:text-neutral-400">
                 Expiry Date
               </th>
-              <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-neutral-500">
+              <th className="px-4 py-4 text-[10px] font-black uppercase tracking-widest text-gray-800 dark:text-neutral-400">
                 Status
               </th>
-              <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-neutral-500">
+              <th className="px-6 py-4 text-right text-[10px] font-black uppercase tracking-widest text-gray-800 dark:text-neutral-400">
                 Actions
               </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-neutral-900">
+          <tbody className="divide-y divide-gray-300 dark:divide-neutral-900">
             {warranties.map((w) => {
               const address =
                 w.ownerships?.[0]?.user?.wallets?.[0]?.address ?? "Unknown";
@@ -146,11 +145,11 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
               return (
                 <tr
                   key={w.id}
-                  className="group hover:bg-slate-50/50 dark:hover:bg-neutral-900/40 transition-colors"
+                  className="group hover:bg-gray-300/50 dark:hover:bg-neutral-900/40 transition-colors"
                 >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-4">
-                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border-2 border-slate-100 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border-2 border-gray-300 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
                         {getProductIcon(w.product?.name ?? "")}
                       </div>
                       <div className="flex flex-col">
@@ -163,7 +162,7 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-4 text-sm font-black text-slate-600 dark:text-neutral-400">
+                  <td className="px-4 py-4 text-sm font-black text-gray-800 dark:text-neutral-400">
                     #{w.tokenId}
                   </td>
                   <td className="px-4 py-4 text-sm font-bold text-slate-900 dark:text-slate-100">
@@ -181,7 +180,7 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => setSelectedQr(w.tokenId)}
-                        className="p-2 rounded-lg border-2 border-slate-200 text-slate-950 hover:bg-slate-100 transition-all dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-900"
+                        className="p-2 rounded-lg border-2 border-gray-400 text-slate-950 hover:bg-gray-300 transition-all dark:border-neutral-700 dark:text-white dark:hover:bg-neutral-900"
                         title="Show QR Code"
                       >
                         <QrCode size={14} strokeWidth={2.5} />
@@ -197,7 +196,7 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
                           result === "invalid" &&
                             "border-red-500 bg-red-50 text-red-700",
                           !result &&
-                            "border-slate-200 text-slate-950 hover:bg-slate-950 hover:text-white dark:border-neutral-700 dark:text-white",
+                            "border-gray-400 text-slate-950 hover:bg-slate-950 hover:text-white dark:border-neutral-700 dark:text-white",
                         )}
                       >
                         {isLoading ? (
@@ -224,7 +223,7 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
 
       {/* --- QR MODAL POPUP --- */}
       {selectedQr && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="relative w-full max-w-sm rounded-3xl bg-white p-8 shadow-2xl dark:bg-neutral-900 animate-in zoom-in-95 duration-200">
             <button
               onClick={() => setSelectedQr(null)}
@@ -240,11 +239,10 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
               <h3 className="text-xl font-black text-slate-950 dark:text-white">
                 Warranty QR Code
               </h3>
-              <p className="mt-1 text-sm font-bold text-slate-500 mb-8">
+              <p className="mt-1 text-sm font-bold text-gray-800 mb-8 dark:text-slate-400">
                 Scan to verify Token #{selectedQr}
               </p>
 
-              {/* The Actual QR Code Canvas */}
               <div className="rounded-2xl border-4 border-slate-50 bg-white p-4 shadow-inner dark:border-neutral-800">
                 <QRCodeCanvas
                   ref={canvasRef}
@@ -255,7 +253,6 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
                 />
               </div>
 
-              {/* Copy Image Button */}
               <button
                 onClick={handleCopyQr}
                 className={cn(
@@ -278,7 +275,7 @@ export default function WarrantyList({ warranties }: WarrantyListProps) {
 
               <button
                 onClick={() => setSelectedQr(null)}
-                className="mt-6 w-full rounded-xl bg-slate-950 py-3 text-sm font-black text-white hover:bg-black dark:bg-white dark:text-black"
+                className="mt-6 w-full rounded-xl bg-slate-950 py-3 text-sm font-black text-white transition-colors hover:bg-black dark:bg-white dark:text-black dark:hover:bg-neutral-200"
               >
                 DONE
               </button>
