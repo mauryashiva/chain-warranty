@@ -1,12 +1,26 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import ThemeToggle from "@/components/theme/ThemeToggle";
-import { Search, Bell } from "lucide-react";
+import { Search, Bell, LogOut, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getWallet, logout } from "@/lib/auth";
 
 export default function Topbar() {
+  const [wallet, setWallet] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Initial check
+    setWallet(getWallet());
+
+    // Listen for storage changes (in case of login in another tab)
+    const handleStorage = () => setWallet(getWallet());
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
+
   return (
-    <div className="flex h-full items-center justify-between px-8 bg-white border-b-2 border-gray-100 dark:border-neutral-900 backdrop-blur-md dark:bg-black">
+    <div className="flex h-full items-center justify-between px-8 bg-white border-b-2 border-gray-100 dark:border-neutral-900 backdrop-blur-md dark:bg-black sticky top-0 z-50">
       {/* Search Section */}
       <div className="relative flex w-full max-w-md items-center group">
         <Search
@@ -26,8 +40,8 @@ export default function Topbar() {
       </div>
 
       {/* Right Section */}
-      <div className="flex items-center gap-6">
-        {/* Status Badge - Higher Visibility */}
+      <div className="flex items-center gap-4">
+        {/* Network Status Badge */}
         <div className="hidden items-center gap-2 rounded-full border-2 border-emerald-200 bg-emerald-50 px-4 py-2 dark:border-emerald-500/30 dark:bg-emerald-500/10 md:flex">
           <span className="relative flex h-2.5 w-2.5">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-75"></span>
@@ -38,14 +52,38 @@ export default function Topbar() {
           </span>
         </div>
 
-        {/* Action Icons */}
-        <div className="flex items-center gap-4 border-l-2 border-gray-100 pl-6 dark:border-neutral-900">
-          <div className="scale-110">
+        {/* Wallet & Auth Section */}
+        <div className="flex items-center gap-3 border-l-2 border-gray-100 pl-4 dark:border-neutral-900">
+          {wallet ? (
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-3 py-1.5 dark:border-neutral-800 dark:bg-neutral-900">
+                <Wallet size={14} className="text-blue-600" />
+                <span className="text-xs font-black text-slate-950 dark:text-white">
+                  {wallet.slice(0, 6)}...{wallet.slice(-4)}
+                </span>
+              </div>
+
+              <button
+                onClick={logout}
+                title="Logout"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600 transition-all hover:bg-rose-600 hover:text-white dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-600 dark:hover:text-white"
+              >
+                <LogOut size={18} strokeWidth={3} />
+              </button>
+            </div>
+          ) : (
+            <span className="text-[10px] font-black uppercase tracking-tighter text-rose-600">
+              Not Connected
+            </span>
+          )}
+
+          <div className="ml-2">
             <ThemeToggle />
           </div>
+
           <button className="relative flex h-10 w-10 items-center justify-center rounded-xl border-2 border-transparent text-slate-950 transition-all hover:bg-slate-100 hover:border-slate-200 dark:text-white dark:hover:bg-neutral-900 dark:hover:border-neutral-800">
             <Bell size={20} strokeWidth={2.5} />
-            <span className="absolute top-2 right-2 h-3 w-3 rounded-full border-2 border-white bg-blue-600 shadow-sm dark:border-black"></span>
+            <span className="absolute top-2.5 right-2.5 h-2 w-2 rounded-full bg-blue-600 ring-2 ring-white dark:ring-black"></span>
           </button>
         </div>
       </div>

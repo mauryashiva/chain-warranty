@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -12,8 +13,10 @@ import {
   ClipboardList,
   PanelLeftClose,
   PanelLeftOpen,
+  User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getWallet } from "@/lib/auth";
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -54,6 +57,15 @@ const navigation = [
 
 export default function Sidebar({ isCollapsed, setCollapsed }: SidebarProps) {
   const pathname = usePathname();
+  const [wallet, setWallet] = useState<string | null>(null);
+
+  useEffect(() => {
+    setWallet(getWallet());
+    // Listen for changes (sync with Topbar logout/login)
+    const handleStorage = () => setWallet(getWallet());
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   return (
     <aside
@@ -97,10 +109,9 @@ export default function Sidebar({ isCollapsed, setCollapsed }: SidebarProps) {
       </div>
 
       {/* Navigation Groups */}
-      <nav className="flex-1 space-y-4 px-3 py-6 overflow-y-auto">
+      <nav className="flex-1 space-y-4 px-3 py-6 overflow-y-auto custom-scrollbar">
         {navigation.map((section, idx) => (
           <div key={idx} className="space-y-1">
-            {/* Professional Group Label */}
             {section.group && !isCollapsed && (
               <div className="px-3 py-1 mb-2">
                 <span className="inline-block rounded px-2 py-0.5 text-[10px] font-black tracking-[0.2em] bg-slate-100 text-slate-600 dark:bg-neutral-900 dark:text-neutral-400">
@@ -141,24 +152,26 @@ export default function Sidebar({ isCollapsed, setCollapsed }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Bottom section */}
+      {/* Bottom section - Now shows User Wallet Info */}
       <div className="border-t-2 border-gray-100 p-4 dark:border-neutral-900">
         <div
           className={cn(
-            "flex items-center gap-3 px-2",
-            isCollapsed && "justify-center px-0",
+            "flex items-center gap-3 px-2 py-2 rounded-xl bg-slate-50 dark:bg-neutral-900/50",
+            isCollapsed && "justify-center px-0 bg-transparent",
           )}
         >
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-slate-950 text-sm font-black text-white dark:bg-white dark:text-black shadow-lg">
-            N
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-white dark:bg-white dark:text-black shadow-md">
+            <User size={18} strokeWidth={3} />
           </div>
           {!isCollapsed && (
             <div className="flex flex-col overflow-hidden">
-              <span className="truncate text-sm font-black text-slate-950 dark:text-white">
-                ChainWarranty
+              <span className="truncate text-xs font-black text-slate-950 dark:text-white">
+                {wallet
+                  ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}`
+                  : "Guest User"}
               </span>
               <span className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">
-                v1.0 Stable
+                {wallet ? "Verified Owner" : "v1.0 Stable"}
               </span>
             </div>
           )}
