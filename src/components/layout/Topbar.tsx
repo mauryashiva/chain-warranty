@@ -1,23 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useAuth } from "@/context/AuthContext";
 import ThemeToggle from "@/components/theme/ThemeToggle";
 import { Search, Bell, LogOut, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getWallet, logout } from "@/lib/auth";
 
 export default function Topbar() {
-  const [wallet, setWallet] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Initial check
-    setWallet(getWallet());
-
-    // Listen for storage changes (in case of login in another tab)
-    const handleStorage = () => setWallet(getWallet());
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, []);
+  // Use the global auth state and logout function
+  const { address, logout, isMounted } = useAuth();
 
   return (
     <div className="flex h-full items-center justify-between px-8 bg-white border-b-2 border-gray-100 dark:border-neutral-900 backdrop-blur-md dark:bg-black sticky top-0 z-50">
@@ -54,27 +44,32 @@ export default function Topbar() {
 
         {/* Wallet & Auth Section */}
         <div className="flex items-center gap-3 border-l-2 border-gray-100 pl-4 dark:border-neutral-900">
-          {wallet ? (
+          {/* We use isMounted to prevent hydration flicker. 
+              The wallet only shows once the client-side context is ready.
+          */}
+          {isMounted && address ? (
             <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-3 py-1.5 dark:border-neutral-800 dark:bg-neutral-900">
+              <div className="flex items-center gap-2 rounded-xl border-2 border-slate-200 bg-white px-3 py-1.5 dark:border-neutral-800 dark:bg-neutral-900 shadow-sm">
                 <Wallet size={14} className="text-blue-600" />
                 <span className="text-xs font-black text-slate-950 dark:text-white">
-                  {wallet.slice(0, 6)}...{wallet.slice(-4)}
+                  {address.slice(0, 6)}...{address.slice(-4)}
                 </span>
               </div>
 
               <button
                 onClick={logout}
                 title="Logout"
-                className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600 transition-all hover:bg-rose-600 hover:text-white dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-600 dark:hover:text-white"
+                className="flex h-9 w-9 items-center justify-center rounded-xl bg-rose-50 text-rose-600 transition-all hover:bg-rose-600 hover:text-white dark:bg-rose-500/10 dark:text-rose-400 dark:hover:bg-rose-600 dark:hover:text-white active:scale-90"
               >
                 <LogOut size={18} strokeWidth={3} />
               </button>
             </div>
           ) : (
-            <span className="text-[10px] font-black uppercase tracking-tighter text-rose-600">
-              Not Connected
-            </span>
+            <div className="flex items-center px-3 py-1.5 bg-rose-50 dark:bg-rose-500/10 rounded-lg">
+              <span className="text-[10px] font-black uppercase tracking-tighter text-rose-600">
+                {isMounted ? "Not Connected" : "Initializing..."}
+              </span>
+            </div>
           )}
 
           <div className="ml-2">

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -16,7 +15,7 @@ import {
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getWallet } from "@/lib/auth";
+import { useAuth } from "@/context/AuthContext";
 
 interface SidebarProps {
   isCollapsed: boolean;
@@ -57,15 +56,8 @@ const navigation = [
 
 export default function Sidebar({ isCollapsed, setCollapsed }: SidebarProps) {
   const pathname = usePathname();
-  const [wallet, setWallet] = useState<string | null>(null);
-
-  useEffect(() => {
-    setWallet(getWallet());
-    // Listen for changes (sync with Topbar logout/login)
-    const handleStorage = () => setWallet(getWallet());
-    window.addEventListener("storage", handleStorage);
-    return () => window.removeEventListener("storage", handleStorage);
-  }, []);
+  // ✅ Use Global Auth instead of local state
+  const { address, isMounted } = useAuth();
 
   return (
     <aside
@@ -152,7 +144,7 @@ export default function Sidebar({ isCollapsed, setCollapsed }: SidebarProps) {
         ))}
       </nav>
 
-      {/* Bottom section - Now shows User Wallet Info */}
+      {/* Bottom section - Global Auth Integration */}
       <div className="border-t-2 border-gray-100 p-4 dark:border-neutral-900">
         <div
           className={cn(
@@ -166,12 +158,12 @@ export default function Sidebar({ isCollapsed, setCollapsed }: SidebarProps) {
           {!isCollapsed && (
             <div className="flex flex-col overflow-hidden">
               <span className="truncate text-xs font-black text-slate-950 dark:text-white">
-                {wallet
-                  ? `${wallet.slice(0, 6)}...${wallet.slice(-4)}`
+                {isMounted && address
+                  ? `${address.slice(0, 6)}...${address.slice(-4)}`
                   : "Guest User"}
               </span>
               <span className="text-[10px] font-black text-blue-600 uppercase tracking-tighter">
-                {wallet ? "Verified Owner" : "v1.0 Stable"}
+                {address ? "Verified Owner" : "v1.0 Stable"}
               </span>
             </div>
           )}
