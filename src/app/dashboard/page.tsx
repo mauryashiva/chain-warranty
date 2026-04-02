@@ -10,8 +10,6 @@ import { cn } from "@/lib/utils";
 
 export default async function DashboardPage() {
   // --- SERVER-SIDE AUTH CHECK ---
-  // We check the 'user' cookie set by your SIWE verify API.
-  // This prevents the page from even loading if the user isn't authenticated.
   const cookieStore = await cookies();
   const userCookie = cookieStore.get("user");
 
@@ -90,12 +88,7 @@ export default async function DashboardPage() {
       {/* Dashboard Header */}
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-1">
-            <ShieldCheck size={16} strokeWidth={3} />
-            <span className="text-[10px] font-black uppercase tracking-[0.3em]">
-              Network Active
-            </span>
-          </div>
+          {/* Network Active Badge Removed from here */}
           <h1 className="text-4xl font-black tracking-tighter text-slate-950 dark:text-white">
             System Overview
           </h1>
