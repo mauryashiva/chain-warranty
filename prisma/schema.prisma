@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+
 }
 
 //////////////////////////////////////////////////////
@@ -79,6 +80,14 @@ model Warranty {
   id              String   @id @default(cuid())
   tokenId         String   @unique
   contractAddress String
+
+  // Add these fields to match your form
+  serialNumber    String?
+  imei            String?
+  retailer        String?
+  country         String?
+  price           Float?
+  productCondition String? // e.g., "New", "Open Box"
 
   productId       String
 
