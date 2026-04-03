@@ -13,6 +13,9 @@
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
+    /* --- FIX FOR VERCEL BUILD ERROR --- */
+    "ignoreDeprecations": "5.0",
+    /* ---------------------------------- */
     "plugins": [
       {
         "name": "next"
