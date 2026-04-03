@@ -1,14 +1,6 @@
 "use client";
 
-import {
-  Info,
-  ShieldCheck,
-  User,
-  Package,
-  FileCheck,
-  ArrowLeft,
-  Zap,
-} from "lucide-react";
+import { ShieldCheck, User, ArrowLeft, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function StepReviewConfirm({ data, update, onBack }: any) {
@@ -21,7 +13,7 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
   const sectionLabel =
     "text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 mb-4 flex items-center gap-2";
   const rowClasses =
-    "flex justify-between py-3 border-b border-slate-50 dark:border-neutral-900 last:border-0";
+    "flex justify-between py-3 border-b border-slate-100 dark:border-neutral-900 last:border-0";
   const keyClasses =
     "text-[11px] font-bold text-slate-400 uppercase tracking-tight";
   const valueClasses =
@@ -87,10 +79,10 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
       <section className="space-y-6">
         <h4 className={sectionLabel}>
           <ShieldCheck size={14} strokeWidth={3} />
-          Review Asset Specifications
+          Review & Confirm
         </h4>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 p-8 rounded-[2rem] bg-slate-50/50 dark:bg-neutral-900/30 border border-slate-100 dark:border-neutral-800">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 p-8 rounded-4xl bg-slate-50/50 dark:bg-neutral-900/30 border border-slate-100 dark:border-neutral-800">
           {/* Column 1: Product Specs */}
           <div className="space-y-1">
             <div className={rowClasses}>
@@ -123,7 +115,7 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
             </div>
           </div>
 
-          {/* Column 2: Purchase & Assets */}
+          {/* Column 2: Purchase & Files */}
           <div className="space-y-1">
             <div className={rowClasses}>
               <span className={keyClasses}>Purchase Date</span>
@@ -145,50 +137,73 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
               <span className={keyClasses}>Invoice #</span>
               <span className={valueClasses}>{data.invoiceNumber || "—"}</span>
             </div>
-
-            {/* File Status Indicators */}
             <div className={rowClasses}>
-              <span className={keyClasses}>Documentation</span>
+              <span className={keyClasses}>Country</span>
+              <span className={valueClasses}>{data.country || "—"}</span>
+            </div>
+
+            {/* Document Status Rows */}
+            <div className={rowClasses}>
+              <span className={keyClasses}>Front photo</span>
               <span
                 className={cn(
-                  "text-[10px] font-black px-2 py-0.5 rounded-md",
-                  data.invoiceDoc
-                    ? "bg-emerald-500/10 text-emerald-600"
-                    : "bg-rose-500/10 text-rose-600",
+                  valueClasses,
+                  !data.frontPhoto && "text-rose-500 font-bold",
                 )}
               >
-                {data.invoiceDoc ? "INVOICE ATTACHED" : "MISSING INVOICE"}
+                {data.frontPhoto ? "UPLOADED" : "NOT UPLOADED"}
               </span>
             </div>
             <div className={rowClasses}>
-              <span className={keyClasses}>Visual Proof</span>
+              <span className={keyClasses}>Back photo</span>
               <span
                 className={cn(
-                  "text-[10px] font-black px-2 py-0.5 rounded-md",
-                  data.frontPhoto
-                    ? "bg-emerald-500/10 text-emerald-600"
-                    : "bg-rose-500/10 text-rose-600",
+                  valueClasses,
+                  !data.backPhoto && "text-rose-500 font-bold",
                 )}
               >
-                {data.frontPhoto ? "PHOTOS UPLOADED" : "MISSING PHOTOS"}
+                {data.backPhoto ? "UPLOADED" : "NOT UPLOADED"}
+              </span>
+            </div>
+            <div className={rowClasses}>
+              <span className={keyClasses}>Invoice doc</span>
+              <span
+                className={cn(
+                  valueClasses,
+                  !data.invoiceDoc && "text-rose-500 font-bold",
+                )}
+              >
+                {data.invoiceDoc ? "UPLOADED" : "NOT UPLOADED"}
+              </span>
+            </div>
+            <div className={rowClasses}>
+              <span className={keyClasses}>Warranty card</span>
+              <span
+                className={cn(
+                  valueClasses,
+                  !data.warrantyCard && "text-rose-500 font-bold",
+                )}
+              >
+                {data.warrantyCard ? "UPLOADED" : "NOT UPLOADED"}
               </span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* INFO CALLOUT */}
-      <div className="p-6 rounded-2xl bg-blue-600/5 border border-blue-600/20 flex gap-4 items-start animate-pulse-slow">
+      {/* BLOCKCHAIN INFO CALLOUT */}
+      <div className="p-6 rounded-2xl bg-blue-600/5 border border-blue-600/20 flex gap-4 items-start">
         <div className="p-2 rounded-xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
           <Zap size={18} fill="currentColor" />
         </div>
         <div className="space-y-1">
-          <p className="text-xs font-black text-blue-900 dark:text-blue-400 uppercase tracking-tight">
+          <p className="text-[11px] font-black text-blue-900 dark:text-blue-400 uppercase tracking-tight">
             On-Chain Finalization
           </p>
           <p className="text-[11px] font-bold text-blue-800/70 dark:text-blue-400/60 leading-relaxed">
-            Minting will generate a unique NFT on the Ethereum blockchain.
-            Documents are hashed on IPFS for decentralized verification.
+            All uploaded images and documents will be stored on IPFS. Their
+            content hashes will be written immutably into the NFT metadata
+            on-chain.
           </p>
         </div>
       </div>
@@ -197,13 +212,13 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
       <div className="flex items-center justify-between pt-8 border-t border-slate-100 dark:border-neutral-900">
         <button
           onClick={onBack}
-          className="group flex items-center gap-2 px-8 py-4 text-xs font-black text-slate-400 hover:text-slate-950 dark:hover:text-white transition-all"
+          className="group flex items-center gap-2 px-4 py-2 text-xs font-black text-slate-400 hover:text-slate-950 dark:hover:text-white transition-all"
         >
           <ArrowLeft
             size={16}
             className="group-hover:-translate-x-1 transition-transform"
           />
-          BACK TO UPLOAD
+          BACK
         </button>
 
         <button

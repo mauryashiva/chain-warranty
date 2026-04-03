@@ -9,6 +9,7 @@ import {
   Globe,
   ArrowRight,
   Edit3,
+  Clock,
 } from "lucide-react";
 
 const CONDITIONS = ["New", "Open box", "Refurbished", "Pre-owned"];
@@ -22,39 +23,42 @@ const CATEGORIES = [
   "Wearable",
   "Other electronics",
 ];
-const PERIODS = ["1 year", "2 years", "3 years", "5 years", "Lifetime"];
+const PERIODS = [
+  "1 year",
+  "2 years",
+  "3 years",
+  "5 years",
+  "Lifetime",
+  "Other",
+];
 const COUNTRIES = ["India", "USA", "UAE", "UK", "Singapore", "Other"];
 
 export default function StepProductInfo({ data, update, onNext }: any) {
-  // Local state to handle the "Other" category text input
   const [isOtherCategory, setIsOtherCategory] = useState(false);
+  const [isOtherPeriod, setIsOtherPeriod] = useState(false);
+  const [isOtherCountry, setIsOtherCountry] = useState(false);
 
   useEffect(() => {
-    // Improved logic: If the category is "Other electronics" OR if the current
-    // value isn't in our list (meaning it was typed manually), treat as Other.
-    const isManualValue =
+    // Check Category
+    const isManualCat =
       data.category &&
       !CATEGORIES.filter((c) => c !== "Other electronics").includes(
         data.category,
       );
+    setIsOtherCategory(data.category === "Other electronics" || isManualCat);
 
-    if (data.category === "Other electronics" || isManualValue) {
-      setIsOtherCategory(true);
-    } else {
-      setIsOtherCategory(false);
-    }
-  }, [data.category]);
+    // Check Period
+    const isManualPeriod =
+      data.warrantyPeriod &&
+      !PERIODS.filter((p) => p !== "Other").includes(data.warrantyPeriod);
+    setIsOtherPeriod(data.warrantyPeriod === "Other" || isManualPeriod);
 
-  const handleCategoryChange = (val: string) => {
-    if (val === "Other electronics") {
-      setIsOtherCategory(true);
-      // We set it to a placeholder or empty so the user is forced to type
-      update({ ...data, category: "Other electronics" });
-    } else {
-      setIsOtherCategory(false);
-      update({ ...data, category: val });
-    }
-  };
+    // Check Country
+    const isManualCountry =
+      data.country &&
+      !COUNTRIES.filter((c) => c !== "Other").includes(data.country);
+    setIsOtherCountry(data.country === "Other" || isManualCountry);
+  }, [data.category, data.warrantyPeriod, data.country]);
 
   const inputClasses =
     "w-full px-5 py-4 rounded-xl border border-slate-200 bg-white text-sm font-medium outline-none transition-all focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 dark:bg-neutral-950 dark:border-neutral-800 dark:text-white dark:focus:border-blue-500";
@@ -63,7 +67,7 @@ export default function StepProductInfo({ data, update, onNext }: any) {
     "text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2 block";
 
   return (
-    <div className="max-w-4xl mx-auto space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-4xl space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* SECTION 1: BASIC PRODUCT DETAILS */}
       <section className="space-y-8">
         <div className="flex items-center gap-4">
@@ -122,7 +126,9 @@ export default function StepProductInfo({ data, update, onNext }: any) {
               <div className="relative">
                 <select
                   value={isOtherCategory ? "Other electronics" : data.category}
-                  onChange={(e) => handleCategoryChange(e.target.value)}
+                  onChange={(e) =>
+                    update({ ...data, category: e.target.value })
+                  }
                   className={cn(
                     inputClasses,
                     "appearance-none pr-12 cursor-pointer",
@@ -142,8 +148,6 @@ export default function StepProductInfo({ data, update, onNext }: any) {
                   size={18}
                 />
               </div>
-
-              {/* Conditional input for "Other" category */}
               {isOtherCategory && (
                 <div className="relative animate-in zoom-in-95 duration-300">
                   <input
@@ -154,7 +158,7 @@ export default function StepProductInfo({ data, update, onNext }: any) {
                     onChange={(e) =>
                       update({ ...data, category: e.target.value })
                     }
-                    placeholder="Specify your product type..."
+                    placeholder="Specify product type..."
                     className={cn(
                       inputClasses,
                       "pl-11 border-blue-200 bg-blue-50/30",
@@ -174,7 +178,7 @@ export default function StepProductInfo({ data, update, onNext }: any) {
             <input
               value={data.color}
               onChange={(e) => update({ ...data, color: e.target.value })}
-              placeholder="e.g. Midnight Black, 256GB"
+              placeholder="e.g. Midnight Black"
               className={inputClasses}
             />
           </div>
@@ -211,27 +215,51 @@ export default function StepProductInfo({ data, update, onNext }: any) {
 
           <div className="space-y-1">
             <label className={labelClasses}>Warranty period</label>
-            <div className="relative">
-              <select
-                value={data.warrantyPeriod}
-                onChange={(e) =>
-                  update({ ...data, warrantyPeriod: e.target.value })
-                }
-                className={cn(
-                  inputClasses,
-                  "appearance-none pr-12 cursor-pointer",
-                )}
-              >
-                {PERIODS.map((p) => (
-                  <option key={p} value={p}>
-                    {p}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                size={18}
-              />
+            <div className="flex flex-col gap-3">
+              <div className="relative">
+                <select
+                  value={isOtherPeriod ? "Other" : data.warrantyPeriod}
+                  onChange={(e) =>
+                    update({ ...data, warrantyPeriod: e.target.value })
+                  }
+                  className={cn(
+                    inputClasses,
+                    "appearance-none pr-12 cursor-pointer",
+                  )}
+                >
+                  {PERIODS.map((p) => (
+                    <option key={p} value={p}>
+                      {p}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  size={18}
+                />
+              </div>
+              {isOtherPeriod && (
+                <div className="relative animate-in zoom-in-95 duration-300">
+                  <input
+                    autoFocus
+                    value={
+                      data.warrantyPeriod === "Other" ? "" : data.warrantyPeriod
+                    }
+                    onChange={(e) =>
+                      update({ ...data, warrantyPeriod: e.target.value })
+                    }
+                    placeholder="e.g. 6 Months"
+                    className={cn(
+                      inputClasses,
+                      "pl-11 border-blue-200 bg-blue-50/30",
+                    )}
+                  />
+                  <Clock
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500"
+                    size={16}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -276,25 +304,47 @@ export default function StepProductInfo({ data, update, onNext }: any) {
 
           <div className="space-y-1">
             <label className={labelClasses}>Country</label>
-            <div className="relative">
-              <select
-                value={data.country}
-                onChange={(e) => update({ ...data, country: e.target.value })}
-                className={cn(
-                  inputClasses,
-                  "appearance-none pr-12 cursor-pointer",
-                )}
-              >
-                {COUNTRIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-              <Globe
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                size={18}
-              />
+            <div className="flex flex-col gap-3">
+              <div className="relative">
+                <select
+                  value={isOtherCountry ? "Other" : data.country}
+                  onChange={(e) => update({ ...data, country: e.target.value })}
+                  className={cn(
+                    inputClasses,
+                    "appearance-none pr-12 cursor-pointer",
+                  )}
+                >
+                  {COUNTRIES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}
+                    </option>
+                  ))}
+                </select>
+                <Globe
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  size={18}
+                />
+              </div>
+              {isOtherCountry && (
+                <div className="relative animate-in zoom-in-95 duration-300">
+                  <input
+                    autoFocus
+                    value={data.country === "Other" ? "" : data.country}
+                    onChange={(e) =>
+                      update({ ...data, country: e.target.value })
+                    }
+                    placeholder="Enter country..."
+                    className={cn(
+                      inputClasses,
+                      "pl-11 border-blue-200 bg-blue-50/30",
+                    )}
+                  />
+                  <Edit3
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500"
+                    size={16}
+                  />
+                </div>
+              )}
             </div>
           </div>
         </div>
