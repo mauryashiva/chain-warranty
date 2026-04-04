@@ -10,6 +10,9 @@ import {
   ArrowRight,
   Edit3,
   Clock,
+  Package,
+  ShoppingCart,
+  CheckCircle2,
 } from "lucide-react";
 
 const CONDITIONS = ["New", "Open box", "Refurbished", "Pre-owned"];
@@ -39,7 +42,6 @@ export default function StepProductInfo({ data, update, onNext }: any) {
   const [isOtherCountry, setIsOtherCountry] = useState(false);
 
   useEffect(() => {
-    // Check Category
     const isManualCat =
       data.category &&
       !CATEGORIES.filter((c) => c !== "Other electronics").includes(
@@ -47,13 +49,11 @@ export default function StepProductInfo({ data, update, onNext }: any) {
       );
     setIsOtherCategory(data.category === "Other electronics" || isManualCat);
 
-    // Check Period
     const isManualPeriod =
       data.warrantyPeriod &&
       !PERIODS.filter((p) => p !== "Other").includes(data.warrantyPeriod);
     setIsOtherPeriod(data.warrantyPeriod === "Other" || isManualPeriod);
 
-    // Check Country
     const isManualCountry =
       data.country &&
       !COUNTRIES.filter((c) => c !== "Other").includes(data.country);
@@ -61,23 +61,26 @@ export default function StepProductInfo({ data, update, onNext }: any) {
   }, [data.category, data.warrantyPeriod, data.country]);
 
   const inputClasses =
-    "w-full px-5 py-4 rounded-xl border border-slate-200 bg-white text-sm font-medium outline-none transition-all focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 dark:bg-neutral-950 dark:border-neutral-800 dark:text-white dark:focus:border-blue-500";
+    "w-full px-5 py-4 rounded-xl border border-gray-200 bg-white text-sm font-medium outline-none transition-all duration-200 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 dark:focus:border-blue-500";
 
   const labelClasses =
-    "text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-2 block";
+    "text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2.5 block ml-1";
 
   return (
-    <div className="max-w-4xl space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       {/* SECTION 1: BASIC PRODUCT DETAILS */}
-      <section className="space-y-8">
-        <div className="flex items-center gap-4">
+      <section className="p-8 rounded-3xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm transition-all">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="p-2 rounded-lg bg-blue-600/10 text-blue-600">
+            <Package size={16} strokeWidth={3} />
+          </div>
           <h3 className="text-xs font-black uppercase tracking-[0.25em] text-blue-600 whitespace-nowrap">
             01. Basic Product Details
           </h3>
-          <div className="h-px w-full bg-linear-to-r from-blue-100 to-transparent dark:from-neutral-800" />
+          <div className="h-px w-full bg-gradient-to-r from-blue-100 to-transparent dark:from-gray-700" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-1">
             <label className={labelClasses}>Product name *</label>
             <input
@@ -120,7 +123,7 @@ export default function StepProductInfo({ data, update, onNext }: any) {
             />
           </div>
 
-          <div className="space-y-1">
+          <div className="space-y-1 md:col-span-1">
             <label className={labelClasses}>Category *</label>
             <div className="flex flex-col gap-3">
               <div className="relative">
@@ -144,7 +147,7 @@ export default function StepProductInfo({ data, update, onNext }: any) {
                   ))}
                 </select>
                 <ChevronDown
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                   size={18}
                 />
               </div>
@@ -161,7 +164,7 @@ export default function StepProductInfo({ data, update, onNext }: any) {
                     placeholder="Specify product type..."
                     className={cn(
                       inputClasses,
-                      "pl-11 border-blue-200 bg-blue-50/30",
+                      "pl-11 border-blue-200 bg-blue-50/30 dark:bg-blue-500/5 dark:border-blue-500/20",
                     )}
                   />
                   <Edit3
@@ -186,15 +189,18 @@ export default function StepProductInfo({ data, update, onNext }: any) {
       </section>
 
       {/* SECTION 2: PURCHASE DETAILS */}
-      <section className="space-y-8">
-        <div className="flex items-center gap-4">
+      <section className="p-8 rounded-3xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="flex items-center gap-4 mb-8">
+          <div className="p-2 rounded-lg bg-blue-600/10 text-blue-600">
+            <ShoppingCart size={16} strokeWidth={3} />
+          </div>
           <h3 className="text-xs font-black uppercase tracking-[0.25em] text-blue-600 whitespace-nowrap">
             02. Purchase Details
           </h3>
-          <div className="h-px w-full bg-linear-to-r from-blue-100 to-transparent dark:from-neutral-800" />
+          <div className="h-px w-full bg-gradient-to-r from-blue-100 to-transparent dark:from-gray-700" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="space-y-1">
             <label className={labelClasses}>Purchase date *</label>
             <div className="relative">
@@ -207,7 +213,7 @@ export default function StepProductInfo({ data, update, onNext }: any) {
                 className={cn(inputClasses, "pr-12")}
               />
               <Calendar
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                 size={18}
               />
             </div>
@@ -234,7 +240,7 @@ export default function StepProductInfo({ data, update, onNext }: any) {
                   ))}
                 </select>
                 <ChevronDown
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                   size={18}
                 />
               </div>
@@ -251,7 +257,7 @@ export default function StepProductInfo({ data, update, onNext }: any) {
                     placeholder="e.g. 6 Months"
                     className={cn(
                       inputClasses,
-                      "pl-11 border-blue-200 bg-blue-50/30",
+                      "pl-11 border-blue-200 bg-blue-50/30 dark:bg-blue-500/5 dark:border-blue-500/20",
                     )}
                   />
                   <Clock
@@ -274,7 +280,7 @@ export default function StepProductInfo({ data, update, onNext }: any) {
                 className={cn(inputClasses, "pl-12")}
               />
               <DollarSign
-                className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
                 size={18}
               />
             </div>
@@ -321,7 +327,7 @@ export default function StepProductInfo({ data, update, onNext }: any) {
                   ))}
                 </select>
                 <Globe
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
                   size={18}
                 />
               </div>
@@ -336,7 +342,7 @@ export default function StepProductInfo({ data, update, onNext }: any) {
                     placeholder="Enter country..."
                     className={cn(
                       inputClasses,
-                      "pl-11 border-blue-200 bg-blue-50/30",
+                      "pl-11 border-blue-200 bg-blue-50/30 dark:bg-blue-500/5 dark:border-blue-500/20",
                     )}
                   />
                   <Edit3
@@ -351,7 +357,7 @@ export default function StepProductInfo({ data, update, onNext }: any) {
       </section>
 
       {/* SECTION 3: CONDITION */}
-      <section className="space-y-4 p-6 rounded-2xl bg-slate-50 dark:bg-neutral-900/50 border border-slate-100 dark:border-neutral-800">
+      <section className="space-y-5 p-8 rounded-3xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
         <label className={labelClasses}>
           Product condition at registration
         </label>
@@ -362,12 +368,18 @@ export default function StepProductInfo({ data, update, onNext }: any) {
               type="button"
               onClick={() => update({ ...data, condition: c })}
               className={cn(
-                "px-6 py-3 rounded-xl text-[13px] font-bold transition-all border active:scale-95",
+                "group relative px-8 py-4 rounded-2xl text-[13px] font-black tracking-tight transition-all border active:scale-95 flex items-center gap-3 overflow-hidden",
                 data.condition === c
-                  ? "bg-slate-900 text-white border-slate-900 shadow-lg dark:bg-blue-600 dark:border-blue-600"
-                  : "bg-white border-slate-200 text-slate-600 hover:border-blue-400 dark:bg-neutral-800 dark:border-neutral-700 dark:text-neutral-300",
+                  ? "bg-gray-900 text-white border-gray-900 shadow-xl dark:bg-blue-600 dark:border-blue-600"
+                  : "bg-white border-gray-200 text-gray-600 hover:border-blue-400 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-400",
               )}
             >
+              {data.condition === c && (
+                <CheckCircle2
+                  size={16}
+                  className="text-blue-400 dark:text-white animate-in zoom-in-50"
+                />
+              )}
               {c}
             </button>
           ))}
@@ -375,10 +387,10 @@ export default function StepProductInfo({ data, update, onNext }: any) {
       </section>
 
       {/* FOOTER */}
-      <div className="flex justify-end pt-10">
+      <div className="flex justify-end pt-4">
         <button
           onClick={onNext}
-          className="group flex items-center gap-4 bg-blue-600 text-white px-8 py-4 rounded-xl font-bold text-sm hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-[0.98]"
+          className="group flex items-center gap-4 bg-blue-600 text-white px-10 py-5 rounded-[20px] font-black text-xs tracking-widest hover:bg-blue-700 transition-all shadow-2xl shadow-blue-600/20 active:scale-[0.98]"
         >
           CONTINUE TO UPLOAD
           <ArrowRight
