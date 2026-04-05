@@ -9,7 +9,7 @@ export default function StepImagesDocs({ data, update, onNext, onBack }: any) {
     "text-[11px] font-black uppercase tracking-[0.2em] text-blue-600 mb-6 flex items-center gap-2";
 
   return (
-    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700 bg-white dark:bg-gray-900">
       {/* 💡 Information Callout */}
       <div className="flex gap-4 p-5 rounded-2xl bg-blue-50/50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800/30 items-start">
         <div className="mt-0.5">
@@ -29,63 +29,67 @@ export default function StepImagesDocs({ data, update, onNext, onBack }: any) {
 
       <div className="space-y-10">
         {/* SECTION: PRODUCT IMAGES */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-4">
+        <section className="p-8 rounded-3xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-4 mb-8">
             <h4 className={sectionTitleClasses}>
               <ShieldCheck size={14} strokeWidth={3} />
               Visual Identification
             </h4>
-            <div className="h-px flex-1 bg-slate-100 dark:bg-neutral-800" />
+            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <FileUpload
-              label="Product photo (front)"
+              label="Product photo (front) *"
               icon="camera"
               type="image"
+              // 🔥 Key match: frontPhoto
               onFileSelect={(file) => update({ ...data, frontPhoto: file })}
             />
             <FileUpload
-              label="Product photo (back / serial)"
+              label="Product photo (back / serial) *"
               icon="camera"
               type="image"
+              // 🔥 Key match: backPhoto
               onFileSelect={(file) => update({ ...data, backPhoto: file })}
             />
           </div>
-        </div>
+        </section>
 
         {/* SECTION: PURCHASE DOCUMENTS */}
-        <div className="space-y-6">
-          <div className="flex items-center gap-4">
+        <section className="p-8 rounded-3xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-4 mb-8">
             <h4 className={sectionTitleClasses}>
               <ShieldCheck size={14} strokeWidth={3} />
               Proof of Acquisition
             </h4>
-            <div className="h-px flex-1 bg-slate-100 dark:bg-neutral-800" />
+            <div className="h-px flex-1 bg-gray-200 dark:bg-gray-700" />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <FileUpload
-              label="Invoice / Receipt"
+              label="Invoice / Receipt *"
               icon="doc"
               type="pdf"
+              // 🔥 Key match: invoiceDoc
               onFileSelect={(file) => update({ ...data, invoiceDoc: file })}
             />
             <FileUpload
               label="Warranty card / Box"
               icon="doc"
               type="pdf"
+              // 🔥 Key match: warrantyCard
               onFileSelect={(file) => update({ ...data, warrantyCard: file })}
             />
           </div>
-        </div>
+        </section>
       </div>
 
       {/* FOOTER NAVIGATION */}
-      <div className="flex items-center justify-between pt-10 border-t border-slate-100 dark:border-neutral-900">
+      <div className="flex items-center justify-between pt-10 border-t border-gray-200 dark:border-gray-700">
         <button
           onClick={onBack}
-          className="group flex items-center gap-3 px-6 py-3 rounded-xl text-xs font-black text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all active:scale-95"
+          className="group flex items-center gap-3 px-6 py-3 rounded-xl text-xs font-black text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all active:scale-95"
         >
           <ArrowLeft
             size={16}

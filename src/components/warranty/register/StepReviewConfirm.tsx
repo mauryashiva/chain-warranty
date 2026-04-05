@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import {
   ShieldCheck,
   User,
@@ -9,27 +9,49 @@ import {
   FileCheck,
   FileX,
   ImageIcon,
+  Loader2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, formatWallet } from "@/lib/utils";
+import { useRegisterWarranty } from "@/hooks/use-register-warranty";
+import { useAuth } from "@/context/AuthContext"; // 🔥 Added to fetch wallet automatically
 
 export default function StepReviewConfirm({ data, update, onBack }: any) {
-  // Logic to handle the final Minting call
+  const { register, isRegistering } = useRegisterWarranty();
+  const { address } = useAuth(); // 🔥 Get the connected wallet address
+  const [error, setError] = useState<string | null>(null);
+
+  // 🔥 Industry Standard: Auto-sync the connected wallet to the form data
+  useEffect(() => {
+    if (address && data.ownerWallet !== address) {
+      update({ ...data, ownerWallet: address });
+    }
+  }, [address]);
+
   const handleFinalMint = async () => {
-    console.log("Initializing Blockchain Minting...", data);
-    // This will call your useMintWarranty hook
+    try {
+      setError(null);
+      // Ensure we have a wallet address before proceeding
+      if (!address) {
+        throw new Error("No wallet connected. Please connect MetaMask.");
+      }
+
+      const result = await register(data, address);
+
+      if (result) {
+        console.log("Warranty Successfully Minted:", result);
+      }
+    } catch (err: any) {
+      setError(err.message || "Failed to register warranty. Please try again.");
+    }
   };
 
-  // Helper for generating previews - Fixed for TypeScript "string | null" error
   const getPreview = (file: any): string => {
     if (!file) return "";
     if (typeof file === "string") return file;
-
-    // Check if it's a valid Blob/File before creating URL
     if (file instanceof Blob || file instanceof File) {
       try {
         return URL.createObjectURL(file);
       } catch (e) {
-        console.error("Preview generation failed", e);
         return "";
       }
     }
@@ -62,6 +84,12 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 bg-white dark:bg-gray-900 min-h-screen p-6">
+      {error && (
+        <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-600 text-xs font-bold animate-in shake duration-300">
+          {error}
+        </div>
+      )}
+
       {/* 01. OWNER INFORMATION SECTION */}
       <section className="p-6 rounded-2xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
         <h4 className={sectionLabel}>
@@ -78,10 +106,11 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
             },
             {
               label: "Owner wallet address *",
-              value: data.ownerWallet,
+              value: formatWallet(data.ownerWallet),
               key: "ownerWallet",
-              placeholder: "0x...",
+              placeholder: "Connect wallet to populate...",
               mono: true,
+              readOnly: true, // 🔥 Industry Standard: Prevent manual tampering
             },
             {
               label: "Email address",
@@ -101,6 +130,11 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
                 {field.label}
               </label>
               <input
+                disabled={isRegistering}
+                readOnly={field.readOnly}
+                title={
+                  field.key === "ownerWallet" ? data.ownerWallet : undefined
+                }
                 value={field.value || ""}
                 onChange={(e) =>
                   update({ ...data, [field.key]: e.target.value })
@@ -108,7 +142,9 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
                 placeholder={field.placeholder}
                 className={cn(
                   "w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-[13px] font-bold outline-none transition duration-200",
-                  "focus:border-blue-600 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100",
+                  "focus:border-blue-600 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 disabled:opacity-50",
+                  field.readOnly &&
+                    "bg-gray-50 dark:bg-gray-950/50 cursor-not-allowed border-dashed",
                   field.mono && "font-mono text-[11px]",
                 )}
               />
@@ -125,7 +161,6 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
         </h4>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-8 rounded-3xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-          {/* Column 1: Product Specs & Image Previews */}
           <div className="space-y-6">
             <div className="space-y-1">
               <div className={rowClasses}>
@@ -158,7 +193,6 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
               </div>
             </div>
 
-            {/* Image Preview Grid */}
             <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
               <span className={keyClasses + " block mb-3"}>
                 Attachment Previews
@@ -188,11 +222,6 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
                           size={16}
                         />
                       )}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-1">
-                        <span className="text-[7px] text-white font-black uppercase">
-                          {img.label}
-                        </span>
-                      </div>
                     </div>
                   );
                 })}
@@ -200,7 +229,6 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
             </div>
           </div>
 
-          {/* Column 2: Purchase & Files */}
           <div className="space-y-1">
             <div className={rowClasses}>
               <span className={keyClasses}>Purchase Date</span>
@@ -259,7 +287,7 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
             On-Chain Finalization
           </p>
           <p className="text-[11px] font-bold text-blue-800/70 dark:text-blue-400/60 leading-relaxed">
-            All uploaded images and documents will be stored on IPFS. Their
+            All uploaded images and documents will be stored on Supabase. Their
             content hashes will be written immutably into the NFT metadata
             on-chain.
           </p>
@@ -269,8 +297,9 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
       {/* FOOTER ACTIONS */}
       <div className="flex items-center justify-between pt-6 border-t border-gray-200 dark:border-gray-700">
         <button
+          disabled={isRegistering}
           onClick={onBack}
-          className="group flex items-center gap-2 px-4 py-2 text-xs font-black text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition duration-200"
+          className="group flex items-center gap-2 px-4 py-2 text-xs font-black text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 transition duration-200 disabled:opacity-50"
         >
           <ArrowLeft
             size={16}
@@ -280,11 +309,25 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
         </button>
 
         <button
+          disabled={isRegistering || !address}
           onClick={handleFinalMint}
-          className="group flex items-center gap-3 bg-gray-900 dark:bg-gray-100 dark:text-gray-900 text-white px-8 py-4 rounded-xl font-black text-xs hover:scale-[1.02] active:scale-[0.98] transition duration-200 shadow-xl"
+          className="group flex items-center gap-3 bg-gray-900 dark:bg-gray-100 dark:text-gray-900 text-white px-8 py-4 rounded-xl font-black text-xs hover:scale-[1.02] active:scale-[0.98] transition duration-200 shadow-xl disabled:opacity-70 disabled:cursor-not-allowed"
         >
-          MINT WARRANTY NFT ON BLOCKCHAIN
-          <ShieldCheck size={18} strokeWidth={3} className="text-blue-500" />
+          {isRegistering ? (
+            <>
+              MINTING...
+              <Loader2 size={18} className="animate-spin text-blue-500" />
+            </>
+          ) : (
+            <>
+              MINT WARRANTY NFT ON BLOCKCHAIN
+              <ShieldCheck
+                size={18}
+                strokeWidth={3}
+                className="text-blue-500"
+              />
+            </>
+          )}
         </button>
       </div>
     </div>

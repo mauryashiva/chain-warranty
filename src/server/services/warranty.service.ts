@@ -1,89 +1,177 @@
 // src/server/services/warranty.service.ts
 
 import { prisma } from "@/server/db/prisma";
-import { ownershipService } from "./ownership.service";
 import { blockchainService } from "@/server/blockchain/mint.service";
 
+// 🔥 Industry-Level Type Definition
 type CreateWarrantyInput = {
+  // Identifiers
   productId: string;
+  userId: string;
+  walletAddress: string;
+
+  // Product Details
+  productName: string;
+  brand: string;
+  serialNumber: string;
+  imei?: string | null;
+  category?: string | null;
+  color?: string | null;
+  productCondition?: string | null;
+
+  // Purchase Details
   purchaseDate: Date;
   expiryDate: Date;
-  userId: string;
-  walletAddress: string; // required for mint
+  warrantyPeriod: string;
+  price: string; // Passed as string for Decimal precision
+  retailer?: string | null;
+  invoiceNumber?: string | null;
+  country?: string | null;
+
+  // Owner Snapshot
+  ownerName?: string | null;
+  ownerEmail?: string | null;
+  ownerPhone?: string | null;
+
+  // Supabase URLs
+  frontPhotoUrl?: string | null;
+  backPhotoUrl?: string | null;
+  invoiceDocUrl?: string | null;
+  warrantyCardUrl?: string | null;
 };
 
 export const warrantyService = {
   async create(data: CreateWarrantyInput) {
-    // 🔥 STEP 0 — CHECK IF PRODUCT EXISTS (NEW)
+    // 🛡️ STEP 0 — PRE-FLIGHT CHECK
     const productExists = await prisma.product.findUnique({
       where: { id: data.productId },
     });
 
     if (!productExists) {
       throw new Error(
-        `Product with ID ${data.productId} does not exist. Create the product first!`,
+        `Product ID ${data.productId} not found. Please verify product catalog.`,
       );
     }
 
-    // 🔥 STEP 1 — Mint NFT
+    // 🛡️ STEP 1 — BLOCKCHAIN MINTING
+    // We do this OUTSIDE the DB transaction because blockchain is slow.
     const blockchain = await blockchainService.mintWarranty(data.walletAddress);
 
     if (!blockchain.tokenId) {
-      throw new Error("Failed to mint NFT or extract tokenId");
+      throw new Error("Blockchain Minting failed: No TokenID returned.");
     }
 
-    // 🔥 STEP 2 — Save in DB
-    const warranty = await prisma.warranty.create({
-      data: {
+    // 🛡️ STEP 2 — ATOMIC DATABASE TRANSACTION
+    // This ensures data integrity: everything succeeds or nothing does.
+    return await prisma.$transaction(async (tx) => {
+      // A. Create the Warranty Record
+      const warranty = await tx.warranty.create({
+        data: {
+          tokenId: blockchain.tokenId.toString(),
+          contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS!,
+          productId: data.productId,
+
+          // Product Specs
+          productName: data.productName,
+          brand: data.brand,
+          serialNumber: data.serialNumber,
+          imei: data.imei,
+          category: data.category,
+          color: data.color,
+          productCondition: data.productCondition,
+
+          // Purchase & Financials
+          purchaseDate: data.purchaseDate,
+          expiryDate: data.expiryDate,
+          warrantyPeriod: data.warrantyPeriod,
+
+          // 🔥 Prisma Decimal field accepts a string.
+          // If you still see a TS error here, you MUST run 'npx prisma generate'
+          price: data.price.toString(),
+
+          retailer: data.retailer,
+          invoiceNumber: data.invoiceNumber,
+          country: data.country,
+
+          // Owner Snapshot
+          ownerName: data.ownerName,
+          ownerEmail: data.ownerEmail,
+          ownerPhone: data.ownerPhone,
+
+          // Cloud Storage URLs
+          frontPhotoUrl: data.frontPhotoUrl,
+          backPhotoUrl: data.backPhotoUrl,
+          invoiceDocUrl: data.invoiceDocUrl,
+          warrantyCardUrl: data.warrantyCardUrl,
+
+          status: "ACTIVE",
+        },
+      });
+
+      // B. Create Ownership Record
+      await tx.warrantyOwnership.create({
+        data: {
+          warrantyId: warranty.id,
+          userId: data.userId,
+          isActive: true,
+        },
+      });
+
+      // C. Log the System Event
+      await tx.warrantyEvent.create({
+        data: {
+          warrantyId: warranty.id,
+          type: "CREATED",
+          txHash: blockchain.txHash,
+          metadata: {
+            mintedTo: data.walletAddress,
+            blockchainAction: "INITIAL_MINT",
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+
+      return {
+        warranty,
+        txHash: blockchain.txHash,
         tokenId: blockchain.tokenId,
-        contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS!,
-        productId: data.productId,
-        purchaseDate: data.purchaseDate,
-        expiryDate: data.expiryDate,
-      },
+      };
     });
-
-    // 🔥 STEP 3 — Assign ownership
-    await ownershipService.assignOwnership(warranty.id, data.userId);
-
-    return {
-      warranty,
-      txHash: blockchain.txHash,
-    };
   },
 
   async getAll() {
     return prisma.warranty.findMany({
+      where: { isDeleted: false },
       include: {
         product: true,
         ownerships: {
-          include: {
-            user: true,
-          },
+          where: { isActive: true },
+          include: { user: true },
         },
         claims: true,
-        transfers: {
-          include: {
-            fromUser: true,
-            toUser: true,
-          },
-        },
         events: {
           orderBy: { createdAt: "desc" },
-          take: 10,
         },
       },
+      orderBy: { createdAt: "desc" },
     });
   },
 
   async getById(id: string) {
     return prisma.warranty.findUnique({
-      where: { id },
+      where: { id, isDeleted: false },
       include: {
         product: true,
-        ownerships: true,
-        claims: true,
-        events: true,
+        ownerships: {
+          where: { isActive: true },
+          include: { user: true },
+        },
+        claims: {
+          orderBy: { createdAt: "desc" },
+        },
+        events: {
+          orderBy: { createdAt: "desc" },
+        },
       },
     });
   },

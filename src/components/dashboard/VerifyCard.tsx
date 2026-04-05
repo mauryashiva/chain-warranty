@@ -1,9 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { QrCode, ShieldCheck, Search, X } from "lucide-react";
+import {
+  QrCode,
+  ShieldCheck,
+  Search,
+  X,
+  AlertCircle,
+  Calendar,
+  Package,
+  Clock,
+  CheckCircle2,
+  Loader2,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
-// Assuming QRScanner is your component that handles the camera feed
 import QRScanner from "@/components/qr/QRScanner";
 import { Html5Qrcode } from "html5-qrcode";
 
@@ -21,18 +31,21 @@ export default function VerifyCard() {
     setResult(null);
 
     try {
-      // Logic to handle cleaning up the ID if it includes '#'
-      const res = await fetch(`/api/verify?tokenId=${id.replace("#", "")}`);
+      const cleanId = id.toString().replace("#", "").trim();
+      const res = await fetch(`/api/verify?tokenId=${cleanId}`);
       const data = await res.json();
       setResult(data);
     } catch (err) {
       console.error(err);
+      setResult({
+        valid: false,
+        message: "Network error occurred during verification.",
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  // --- Logic: Handle Image Paste ---
   const handlePaste = async (event: React.ClipboardEvent) => {
     const items = event.clipboardData?.items;
     if (!items) return;
@@ -44,16 +57,15 @@ export default function VerifyCard() {
 
         setIsPasting(true);
         try {
-          // Creating a temporary scanner instance to process the static image file
           const html5QrCode = new Html5Qrcode("paste-temp-container");
           const decodedText = await html5QrCode.scanFile(blob, false);
-
           setTokenId(decodedText);
           handleVerify(decodedText);
         } catch (err) {
-          console.error("Paste scan failed:", err);
-          // Optional: Add a UI toast/notification here instead of alert
-          alert("No valid QR code detected in the pasted image.");
+          setResult({
+            valid: false,
+            message: "No valid QR code detected in image.",
+          });
         } finally {
           setIsPasting(false);
         }
@@ -61,132 +73,197 @@ export default function VerifyCard() {
     }
   };
 
+  const getExpiryDetails = (dateStr: string) => {
+    const now = new Date();
+    const expiry = new Date(dateStr);
+    const diffTime = expiry.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return {
+      isExpired: diffDays < 0,
+      days: Math.abs(diffDays),
+      formatted: expiry.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+      }),
+    };
+  };
+
   return (
-    <div className="rounded-3xl border-2 border-gray-100 bg-white p-6 shadow-sm dark:border-neutral-800 dark:bg-black transition-all">
-      {/* Hidden container for background processing of pasted images */}
+    <div className="rounded-[2.5rem] border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-700 dark:bg-gray-800 transition-all">
       <div id="paste-temp-container" className="hidden"></div>
 
-      {/* Header */}
-      <div className="flex items-start justify-between mb-5">
+      <div className="flex items-start justify-between mb-8">
         <div>
-          <h3 className="text-xl font-black tracking-tight text-slate-950 dark:text-white">
+          <h3 className="text-xl font-black tracking-tight text-gray-900 dark:text-gray-100">
             Verify Warranty
           </h3>
-          <p className="text-[13px] font-bold text-slate-600 dark:text-neutral-400 mt-1">
-            Input Token ID, scan QR, or paste a QR image to verify.
+          <p className="text-[11px] font-bold text-gray-600 dark:text-gray-400 mt-1 uppercase tracking-wider">
+            Blockchain Authentication Protocol
           </p>
         </div>
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 border border-emerald-100 dark:bg-emerald-500/10 dark:border-emerald-900/30">
-          <ShieldCheck size={22} strokeWidth={2.5} />
+        <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-600/10 text-blue-600 border border-blue-600/10">
+          <ShieldCheck size={24} strokeWidth={2.5} />
         </div>
       </div>
 
-      <div className="space-y-3">
-        {/* Input Field */}
+      <div className="space-y-4">
         {!showScanner && (
           <div className="relative group">
             <Search
               size={18}
               strokeWidth={3}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-blue-600 dark:group-focus-within:text-blue-400"
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-blue-600"
             />
             <input
               value={tokenId}
               onChange={(e) => setTokenId(e.target.value)}
               onPaste={handlePaste}
               placeholder={
-                isPasting ? "Processing Image..." : "Enter ID or Paste QR Image"
+                isPasting ? "PROCESSING IMAGE..." : "ENTER ID OR PASTE QR"
               }
               disabled={isPasting}
               className={cn(
-                "h-14 w-full rounded-2xl border-2 pl-12 pr-4 text-sm font-black outline-none transition-all",
-                // Light Mode
-                "border-slate-100 bg-slate-50/50 text-slate-950 placeholder:text-slate-400 focus:border-blue-600 focus:bg-white",
-                // Dark Mode
-                "dark:border-neutral-800 dark:bg-neutral-900 dark:text-white dark:placeholder:text-neutral-500 dark:focus:border-blue-500 dark:focus:bg-neutral-800",
-                isPasting && "opacity-50 cursor-wait",
+                "h-14 w-full rounded-2xl border-2 pl-12 pr-4 text-xs font-black outline-none transition-all uppercase tracking-widest",
+                "border-gray-100 bg-gray-50 text-gray-900 placeholder:text-gray-400 focus:border-blue-600 focus:bg-white",
+                // FIX: Added dark:focus:bg-gray-900 to prevent full white background on focus in dark mode
+                "dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder:text-gray-500 dark:focus:border-blue-500 dark:focus:bg-gray-900",
               )}
             />
           </div>
         )}
 
-        {/* QR Scanner Section */}
         {showScanner ? (
-          <div
-            key="scanner-active"
-            className="relative overflow-hidden rounded-2xl border-2 border-dashed border-emerald-500 bg-black p-1 aspect-square"
-          >
-            <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-3 bg-gradient-to-b from-black/70 to-transparent">
-              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">
-                Camera Active
+          <div className="relative overflow-hidden rounded-3xl border-2 border-dashed border-blue-500 bg-gray-900 p-1 aspect-square">
+            <div className="absolute top-4 left-4 right-4 z-10 flex items-center justify-between">
+              <span className="flex items-center gap-2 text-[10px] font-black text-white bg-blue-600 px-3 py-1.5 rounded-full">
+                <div className="h-2 w-2 bg-white rounded-full animate-pulse" />
+                LENS ACTIVE
               </span>
               <button
                 onClick={() => setShowScanner(false)}
-                className="flex items-center gap-1 text-[10px] font-black text-white bg-red-600 px-2 py-1 rounded-md hover:bg-red-700 transition-colors shadow-lg"
+                className="h-8 w-8 flex items-center justify-center text-white bg-gray-900/50 backdrop-blur-md rounded-full hover:bg-rose-600 transition-colors"
               >
-                <X size={12} strokeWidth={4} />
-                CANCEL
+                <X size={16} strokeWidth={3} />
               </button>
             </div>
-
-            <div className="h-full w-full flex items-center justify-center overflow-hidden rounded-xl">
-              <QRScanner
-                onScan={(data) => {
-                  setTokenId(data);
-                  setShowScanner(false);
-                  handleVerify(data);
-                }}
-              />
-            </div>
+            <QRScanner
+              onScan={(data) => {
+                setTokenId(data);
+                setShowScanner(false);
+                handleVerify(data);
+              }}
+            />
           </div>
         ) : (
-          <>
-            {/* Verify Button */}
+          <div className="flex flex-col gap-3">
             <button
               onClick={() => handleVerify()}
               disabled={loading || isPasting}
-              className={cn(
-                "flex h-14 w-full items-center justify-center gap-3 rounded-2xl border-2 text-sm font-black transition-all active:scale-[0.98] disabled:opacity-50",
-                "border-slate-200 bg-white text-slate-950 hover:bg-slate-950 hover:text-white",
-                "dark:border-neutral-700 dark:bg-transparent dark:text-white dark:hover:bg-white dark:hover:text-black",
-              )}
+              className="group flex h-14 w-full items-center justify-center gap-3 rounded-2xl border-2 border-gray-200 bg-white text-xs font-black uppercase tracking-widest text-gray-900 hover:bg-gray-950 hover:text-white dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:hover:bg-white dark:hover:text-black transition-all"
             >
-              <ShieldCheck
-                size={20}
-                strokeWidth={3}
-                className="text-emerald-600"
-              />
-              {loading ? "VERIFYING..." : "Verify Warranty"}
+              {loading ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <CheckCircle2 size={18} className="text-emerald-500" />
+              )}
+              {loading ? "VERIFYING..." : "Verify Identity"}
             </button>
 
-            {/* Scan Button */}
             <button
               onClick={() => {
                 setResult(null);
                 setShowScanner(true);
               }}
-              className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-emerald-600 text-sm font-black text-white shadow-xl shadow-emerald-600/20 transition-all hover:bg-emerald-700 dark:hover:bg-emerald-500 active:scale-[0.98]"
+              className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl bg-blue-600 text-xs font-black uppercase tracking-widest text-white shadow-xl shadow-blue-600/20 hover:bg-blue-700 transition-all"
             >
-              <QrCode size={20} strokeWidth={3} />
-              Scan QR Code
+              <QrCode size={18} strokeWidth={3} />
+              Scan QR Passport
             </button>
-          </>
+          </div>
         )}
       </div>
 
-      {/* Result Section */}
+      {/* --- Detailed Result Section --- */}
       {result && (
         <div
           className={cn(
-            "mt-4 p-4 rounded-xl border-2 font-black text-sm text-center animate-in fade-in zoom-in-95",
+            "mt-6 p-6 rounded-4xl border-2 animate-in fade-in slide-in-from-top-2 duration-500",
             result.valid
-              ? "bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-500/10 dark:border-emerald-900/50 dark:text-emerald-400"
-              : "bg-red-50 border-red-200 text-red-700 dark:bg-red-500/10 dark:border-red-900/50 dark:text-red-400",
+              ? "bg-emerald-50/50 border-emerald-100 dark:bg-emerald-500/5 dark:border-emerald-500/20"
+              : "bg-rose-50/50 border-rose-100 dark:bg-rose-500/5 dark:border-rose-500/20",
           )}
         >
-          {result.valid
-            ? "✅ VALID BLOCKCHAIN WARRANTY"
-            : "❌ INVALID OR EXPIRED WARRANTY"}
+          <div className="flex items-center gap-3 mb-4">
+            {result.valid ? (
+              <CheckCircle2 size={20} className="text-emerald-600" />
+            ) : (
+              <AlertCircle size={20} className="text-rose-600" />
+            )}
+            <span
+              className={cn(
+                "text-[11px] font-black uppercase tracking-[0.2em]",
+                result.valid
+                  ? "text-emerald-700 dark:text-emerald-400"
+                  : "text-rose-700 dark:text-rose-400",
+              )}
+            >
+              {result.valid ? "Identity Confirmed" : "Authentication Failed"}
+            </span>
+          </div>
+
+          {result.warranty ? (
+            <div className="space-y-4">
+              <div className="flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-gray-900 border border-emerald-100 dark:border-emerald-500/10 shadow-sm">
+                <div className="h-10 w-10 rounded-xl bg-emerald-100 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                  <Package size={20} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest">
+                    Product
+                  </p>
+                  <p className="text-xs font-black text-gray-900 dark:text-white">
+                    {result.warranty.productName}
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-2xl bg-white dark:bg-gray-900 border border-emerald-100 dark:border-emerald-500/10">
+                  <p className="flex items-center gap-1.5 text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-1">
+                    <Calendar size={10} /> Valid Until
+                  </p>
+                  <p className="text-[11px] font-black text-gray-900 dark:text-white">
+                    {getExpiryDetails(result.warranty.expiryDate).formatted}
+                  </p>
+                </div>
+                <div className="p-3 rounded-2xl bg-white dark:bg-gray-900 border border-emerald-100 dark:border-emerald-500/10">
+                  <p className="flex items-center gap-1.5 text-[9px] font-black text-gray-600 dark:text-gray-400 uppercase tracking-widest mb-1">
+                    <Clock size={10} /> Status
+                  </p>
+                  <p
+                    className={cn(
+                      "text-[11px] font-black",
+                      getExpiryDetails(result.warranty.expiryDate).isExpired
+                        ? "text-rose-500"
+                        : "text-emerald-500",
+                    )}
+                  >
+                    {getExpiryDetails(result.warranty.expiryDate).isExpired
+                      ? `Expired ${getExpiryDetails(result.warranty.expiryDate).days}d ago`
+                      : `${getExpiryDetails(result.warranty.expiryDate).days} Days Left`}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="p-2">
+              <p className="text-xs font-bold text-rose-600 dark:text-rose-400 leading-relaxed">
+                {result.message ||
+                  "This token ID does not exist in the blockchain registry or has been revoked."}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

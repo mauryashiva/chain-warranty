@@ -27,7 +27,7 @@ export default function FileUpload({
       if (file.type.startsWith("image/")) {
         setPreview(URL.createObjectURL(file));
       } else {
-        setPreview("pdf-detected"); // Placeholder for PDF icons
+        setPreview("pdf-detected");
       }
     }
   };
@@ -39,15 +39,16 @@ export default function FileUpload({
   };
 
   return (
-    <div className="group space-y-3">
-      <div className="flex items-center justify-between">
-        <label className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+    <div className="group space-y-4">
+      <div className="flex items-center justify-between px-1">
+        <label className="text-[10px] font-black uppercase tracking-[0.15em] text-gray-700 dark:text-gray-400">
           {label}
         </label>
+
         {preview && (
-          <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600 uppercase">
-            <CheckCircle2 size={12} />
-            Ready
+          <span className="flex items-center gap-1.5 text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-tighter animate-in fade-in slide-in-from-right-2">
+            <CheckCircle2 size={12} strokeWidth={3} />
+            READY
           </span>
         )}
       </div>
@@ -55,69 +56,69 @@ export default function FileUpload({
       <div
         onClick={() => fileInputRef.current?.click()}
         className={cn(
-          "relative h-44 w-full cursor-pointer rounded-2xl border-2 border-dashed transition-all duration-300 flex flex-col items-center justify-center overflow-hidden",
+          "relative h-48 w-full cursor-pointer rounded-3xl border-2 border-dashed transition-all duration-500 flex flex-col items-center justify-center overflow-hidden",
           preview
-            ? "border-blue-500 bg-blue-50/10 shadow-inner"
-            : "border-slate-200 bg-slate-50/30 hover:border-blue-400 hover:bg-blue-50/20 dark:border-neutral-800 dark:bg-neutral-950/50",
+            ? "border-blue-500 bg-blue-50/30 dark:bg-blue-500/5 shadow-2xl shadow-blue-500/10"
+            : "border-gray-300 bg-gray-100/60 hover:border-blue-400 hover:bg-blue-50/60 dark:border-gray-700 dark:bg-gray-800/50 dark:hover:border-blue-900",
         )}
       >
         {preview ? (
           <div className="relative h-full w-full group/preview">
             {preview === "pdf-detected" ? (
-              <div className="flex h-full w-full animate-in fade-in zoom-in-95 duration-300 flex-col items-center justify-center gap-3 bg-white dark:bg-neutral-900">
-                <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/20">
-                  <FileText size={32} className="text-blue-600" />
+              <div className="flex h-full w-full animate-in fade-in zoom-in-95 duration-500 flex-col items-center justify-center gap-4 bg-white dark:bg-gray-900">
+                <div className="p-5 rounded-[20px] bg-gray-100 dark:bg-gray-800 shadow-inner">
+                  <FileText size={36} className="text-blue-600" />
                 </div>
-                <div className="text-center">
-                  <p className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-tight">
+
+                <div className="text-center space-y-1">
+                  <p className="text-[11px] font-black text-gray-800 dark:text-white uppercase tracking-widest">
                     Document Attached
                   </p>
-                  <p className="text-[10px] text-slate-500 font-medium">
-                    Ready for verification
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-tight">
+                    Validated for Chain
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="h-full w-full animate-in fade-in duration-500">
+              <div className="h-full w-full animate-in fade-in duration-700">
                 <img
                   src={preview}
                   alt="Preview"
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover/preview:scale-105"
+                  className="h-full w-full object-cover transition-transform duration-700 group-hover/preview:scale-110"
                 />
-                <div className="absolute inset-0 bg-black/10 transition-opacity group-hover/preview:opacity-0" />
+                <div className="absolute inset-0 bg-gray-950/20 transition-opacity group-hover/preview:opacity-0" />
               </div>
             )}
 
-            {/* Remove Button */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
                 clearFile();
               }}
-              className="absolute right-3 top-3 z-10 rounded-xl bg-white/90 p-2 text-slate-900 shadow-xl backdrop-blur-md transition-all hover:bg-red-500 hover:text-white dark:bg-neutral-900/90 dark:text-white"
+              className="absolute right-4 top-4 z-20 rounded-2xl bg-white p-2 text-gray-900 shadow-2xl transition-all hover:bg-rose-500 hover:text-white dark:bg-gray-800 dark:text-white"
             >
-              <X size={16} strokeWidth={2.5} />
+              <X size={16} strokeWidth={3} />
             </button>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-4 px-6 text-center">
-            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-slate-400 shadow-sm ring-1 ring-slate-200 transition-all group-hover:scale-110 group-hover:text-blue-600 group-hover:ring-blue-200 dark:bg-neutral-900 dark:ring-neutral-800 dark:group-hover:ring-blue-900">
+          <div className="flex flex-col items-center gap-5 px-6 text-center">
+            <div className="relative flex h-16 w-16 items-center justify-center rounded-[22px] bg-white text-gray-500 shadow-xl shadow-gray-200/20 ring-1 ring-gray-200 transition-all duration-500 group-hover:scale-110 group-hover:text-blue-600 group-hover:ring-blue-100 dark:bg-gray-900 dark:ring-gray-800 dark:shadow-none dark:group-hover:ring-blue-900/50">
               {icon === "camera" ? (
-                <Camera size={24} strokeWidth={1.5} />
+                <Camera size={26} strokeWidth={1.5} />
               ) : (
-                <FileText size={24} strokeWidth={1.5} />
+                <FileText size={26} strokeWidth={1.5} />
               )}
-              <div className="absolute -bottom-1 -right-1 rounded-full bg-blue-600 p-1 text-white shadow-lg">
-                <UploadCloud size={10} strokeWidth={3} />
+              <div className="absolute -bottom-1.5 -right-1.5 rounded-full bg-blue-600 p-1.5 text-white shadow-xl ring-4 ring-white dark:ring-gray-900">
+                <UploadCloud size={12} strokeWidth={3} />
               </div>
             </div>
 
-            <div className="space-y-1">
-              <p className="text-[12px] font-bold text-slate-700 dark:text-neutral-200">
+            <div className="space-y-1.5">
+              <p className="text-[11px] font-black text-gray-700 dark:text-gray-200 uppercase tracking-widest">
                 Tap to upload {label.toLowerCase()}
               </p>
-              <p className="text-[10px] font-medium text-slate-400 uppercase tracking-tighter">
-                Max size: 5MB • PNG, JPG, PDF
+              <p className="text-[9px] font-bold text-gray-600 dark:text-gray-400 uppercase tracking-tight opacity-80">
+                Max size: 3MB • PNG, JPG, PDF
               </p>
             </div>
           </div>

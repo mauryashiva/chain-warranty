@@ -17,16 +17,41 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  let warranties: any[] = [];
+  let rawWarranties: any[] = [];
   let buildError = "";
 
   try {
     // Fetching data from the server service
-    warranties = (await warrantyService.getAll()) || [];
+    rawWarranties = (await warrantyService.getAll()) || [];
   } catch (error: any) {
     console.error("Dashboard load error", error);
     buildError = error?.message ?? "Failed to connect to the warranty service";
   }
+
+  // 🔥 FIX: Sanitize Data for Client Components
+  // Converts Decimal to Number and Dates to Strings to prevent the "Plain Object" error
+  const warranties = rawWarranties.map((w) => ({
+    ...w,
+    price: w.price ? Number(w.price.toString()) : 0, // Convert Decimal to Number
+    purchaseDate:
+      w.purchaseDate instanceof Date
+        ? w.purchaseDate.toISOString()
+        : w.purchaseDate,
+    expiryDate:
+      w.expiryDate instanceof Date ? w.expiryDate.toISOString() : w.expiryDate,
+    createdAt:
+      w.createdAt instanceof Date ? w.createdAt.toISOString() : w.createdAt,
+    updatedAt:
+      w.updatedAt instanceof Date ? w.updatedAt.toISOString() : w.updatedAt,
+    // Sanitize nested events if they exist
+    events: (w.events || []).map((ev: any) => ({
+      ...ev,
+      createdAt:
+        ev.createdAt instanceof Date
+          ? ev.createdAt.toISOString()
+          : ev.createdAt,
+    })),
+  }));
 
   const now = new Date();
 
@@ -88,7 +113,6 @@ export default async function DashboardPage() {
       {/* Dashboard Header */}
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
-          {/* Network Active Badge Removed from here */}
           <h1 className="text-4xl font-black tracking-tighter text-slate-950 dark:text-white">
             System Overview
           </h1>
@@ -114,7 +138,7 @@ export default async function DashboardPage() {
         {/* Left Column: Warranty List (8 units wide) */}
         <div className="lg:col-span-8 space-y-10">
           <div className="group relative">
-            <div className="absolute -inset-1 rounded-[2.5rem] bg-linear-to-r from-blue-600 to-indigo-600 opacity-[0.03] blur transition duration-1000 group-hover:opacity-[0.07]" />
+            <div className="absolute -inset-1 rounded-[2.5rem] bg-gradient-to-r from-blue-600 to-indigo-600 opacity-[0.03] blur transition duration-1000 group-hover:opacity-[0.07]" />
             <div className="relative">
               <WarrantyList warranties={warranties} />
             </div>

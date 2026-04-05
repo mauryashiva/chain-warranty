@@ -13,6 +13,7 @@ import {
   Package,
   ShoppingCart,
   CheckCircle2,
+  CalendarCheck, // New Icon for Expiry
 } from "lucide-react";
 
 const CONDITIONS = ["New", "Open box", "Refurbished", "Pre-owned"];
@@ -40,6 +41,26 @@ export default function StepProductInfo({ data, update, onNext }: any) {
   const [isOtherCategory, setIsOtherCategory] = useState(false);
   const [isOtherPeriod, setIsOtherPeriod] = useState(false);
   const [isOtherCountry, setIsOtherCountry] = useState(false);
+
+  // 🔥 LOGIC: Auto-Calculate Expiry Date
+  useEffect(() => {
+    if (data.purchaseDate && data.warrantyPeriod) {
+      const purchase = new Date(data.purchaseDate);
+      const yearsMatch = data.warrantyPeriod.match(/\d+/);
+      const yearsToAdd = yearsMatch ? parseInt(yearsMatch[0]) : 1;
+
+      const expiry = new Date(purchase);
+      expiry.setFullYear(expiry.getFullYear() + yearsToAdd);
+
+      // Update the global state with the calculated expiryDate
+      // Formatting to YYYY-MM-DD for consistency
+      const formattedExpiry = expiry.toISOString().split("T")[0];
+
+      if (data.expiryDate !== formattedExpiry) {
+        update({ ...data, expiryDate: formattedExpiry });
+      }
+    }
+  }, [data.purchaseDate, data.warrantyPeriod]);
 
   useEffect(() => {
     const isManualCat =
@@ -77,7 +98,7 @@ export default function StepProductInfo({ data, update, onNext }: any) {
           <h3 className="text-xs font-black uppercase tracking-[0.25em] text-blue-600 whitespace-nowrap">
             01. Basic Product Details
           </h3>
-          <div className="h-px w-full bg-gradient-to-r from-blue-100 to-transparent dark:from-gray-700" />
+          <div className="h-px w-full bg-linear-to-r from-blue-100 to-transparent dark:from-gray-700" />
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -197,10 +218,10 @@ export default function StepProductInfo({ data, update, onNext }: any) {
           <h3 className="text-xs font-black uppercase tracking-[0.25em] text-blue-600 whitespace-nowrap">
             02. Purchase Details
           </h3>
-          <div className="h-px w-full bg-gradient-to-r from-blue-100 to-transparent dark:from-gray-700" />
+          <div className="h-px w-full bg-linear-to-r from-blue-100 to-transparent dark:from-gray-700" />
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <div className="space-y-1">
             <label className={labelClasses}>Purchase date *</label>
             <div className="relative">
@@ -269,11 +290,31 @@ export default function StepProductInfo({ data, update, onNext }: any) {
             </div>
           </div>
 
+          {/* 🔥 NEW: CALCULATED EXPIRY DATE (Read Only for UI Clarity) */}
+          <div className="space-y-1">
+            <label className={labelClasses}>Expiry Date (Calculated)</label>
+            <div className="relative">
+              <input
+                readOnly
+                value={data.expiryDate || "Calculating..."}
+                className={cn(
+                  inputClasses,
+                  "pr-12 bg-gray-50/50 dark:bg-gray-800/50 cursor-not-allowed opacity-80",
+                )}
+              />
+              <CalendarCheck
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-500 opacity-60"
+                size={18}
+              />
+            </div>
+          </div>
+
           <div className="space-y-1">
             <label className={labelClasses}>Price (USD)</label>
             <div className="relative">
               <input
                 type="number"
+                step="0.01"
                 value={data.price}
                 onChange={(e) => update({ ...data, price: e.target.value })}
                 placeholder="0.00"
