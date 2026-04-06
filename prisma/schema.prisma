@@ -18,9 +18,9 @@ model User {
   isDeleted Boolean  @default(false)
 
   // Profile info from registration
-  name      String?
-  email     String?  @unique
-  phone     String?
+  name  String?
+  email String? @unique
+  phone String?
 
   wallets    Wallet[]
   claims     Claim[]
@@ -41,12 +41,42 @@ model Wallet {
   // 🔥 Industry Fix: Added Cascade Delete so no orphan wallets remain if a User is removed
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, address]) 
+  @@unique([userId, address])
   @@index([address])
 }
 
 //////////////////////////////////////////////////////
-// 🏢 BUSINESS ENTITIES
+// 🔐 ADMIN & RBAC SYSTEM
+//////////////////////////////////////////////////////
+
+model Admin {
+  id        String      @id @default(cuid())
+  wallet    String      @unique // The primary identifier for SIWE (MetaMask login)
+  name      String
+  email     String      @unique
+  role      AdminRole   @default(CLAIMS_AGENT)
+  status    AdminStatus @default(ACTIVE)
+  lastLogin DateTime?
+  createdAt DateTime    @default(now())
+
+  auditLogs AuditLog[]
+}
+
+enum AdminRole {
+  SUPER_ADMIN // Can do everything
+  BRAND_MANAGER // Manages Brands & Products
+  CLAIMS_AGENT // Only reviews and resolves claims
+  RETAILER_MANAGER // Manages Retailer list
+}
+
+enum AdminStatus {
+  ACTIVE
+  INACTIVE
+  REVOKED
+}
+
+//////////////////////////////////////////////////////
+// 🏢 BUSINESS ENTITIES & CATALOG
 //////////////////////////////////////////////////////
 
 model Company {
@@ -58,19 +88,53 @@ model Company {
   products  Product[]
 }
 
+model Brand {
+  id        String    @id @default(cuid())
+  name      String    @unique
+  slug      String    @unique
+  country   String
+  status    String    @default("Active")
+  createdAt DateTime  @default(now())
+  products  Product[]
+}
+
 model Product {
-  id          String     @id @default(cuid())
+  id          String   @id @default(cuid())
   name        String
   description String?
-  category    String?    
+  category    String?
+  sku         String?  @unique // Added for professional catalog tracking
   companyId   String
-  createdAt   DateTime   @default(now())
-  isDeleted   Boolean    @default(false)
+  brandId     String? // Link to the new Brand model
+  createdAt   DateTime @default(now())
+  isDeleted   Boolean  @default(false)
 
   company    Company    @relation(fields: [companyId], references: [id])
+  brand      Brand?     @relation(fields: [brandId], references: [id])
   warranties Warranty[]
+  serials    Serial[]
 
   @@index([companyId])
+  @@index([brandId])
+}
+
+model Serial {
+  id           String       @id @default(cuid())
+  number       String       @unique
+  productId    String
+  batch        String?
+  mfgDate      DateTime
+  retailerName String?
+  status       SerialStatus @default(UNREGISTERED)
+  registeredBy String? // Wallet address if registered
+
+  product Product @relation(fields: [productId], references: [id])
+}
+
+enum SerialStatus {
+  UNREGISTERED
+  REGISTERED
+  FLAGGED
 }
 
 //////////////////////////////////////////////////////
@@ -78,8 +142,8 @@ model Product {
 //////////////////////////////////////////////////////
 
 model Warranty {
-  id              String   @id @default(cuid())
-  tokenId         String   @unique
+  id              String @id @default(cuid())
+  tokenId         String @unique
   contractAddress String
 
   // Data captured from Step 01 & 03
@@ -89,50 +153,49 @@ model Warranty {
   imei             String?
   category         String?
   color            String?
-  productCondition String? 
-  
-  // Purchase Details
-  purchaseDate     DateTime
-  warrantyPeriod   String?
-  expiryDate       DateTime
-  
-  // 🔥 Industry Fix: Decimal is the gold standard for currency to avoid rounding errors
-  price            Decimal? @db.Decimal(10, 2) 
-  
-  retailer         String?
-  invoiceNumber    String?
-  country          String?
+  productCondition String?
 
-  // Original Registrant Info (Snapshot for legal/history)
-  ownerName        String?
-  ownerEmail       String?
-  ownerPhone       String?
+  // Purchase Details
+  purchaseDate   DateTime
+  warrantyPeriod String?
+  expiryDate     DateTime
+
+  // 🔥 Industry Fix: Decimal for currency accuracy
+  price Decimal? @db.Decimal(10, 2)
+
+  retailer      String?
+  invoiceNumber String?
+  country       String?
+
+  // Original Registrant Info (Snapshot)
+  ownerName  String?
+  ownerEmail String?
+  ownerPhone String?
 
   // Cloud Storage Links (Supabase URLs)
-  frontPhotoUrl    String?
-  backPhotoUrl     String?
-  invoiceDocUrl    String?
-  warrantyCardUrl  String?
+  frontPhotoUrl   String?
+  backPhotoUrl    String?
+  invoiceDocUrl   String?
+  warrantyCardUrl String?
 
-  status           WarrantyStatus @default(ACTIVE)
-  qrCodeUrl        String?
-  
-  productId        String
-  product          Product        @relation(fields: [productId], references: [id])
+  status    WarrantyStatus @default(ACTIVE)
+  qrCodeUrl String?
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
 
   // Relations
-  ownerships       WarrantyOwnership[]
-  claims           Claim[]
-  events           WarrantyEvent[]
-  transfers        Transfer[]
+  ownerships WarrantyOwnership[]
+  claims     Claim[]
+  events     WarrantyEvent[]
+  transfers  Transfer[]
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  isDeleted        Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  isDeleted Boolean  @default(false)
 
   @@index([tokenId])
-  // 🔥 Industry Fix: Optimized for "Brand + Serial" lookups
-  @@index([brand, serialNumber]) 
+  @@index([brand, serialNumber])
   @@index([ownerEmail])
 }
 
@@ -141,14 +204,14 @@ model Warranty {
 //////////////////////////////////////////////////////
 
 model WarrantyOwnership {
-  id          String   @id @default(cuid())
-  warrantyId  String
-  userId      String
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  warrantyId String
+  userId     String
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
 
-  warranty    Warranty @relation(fields: [warrantyId], references: [id])
-  user        User     @relation(fields: [userId], references: [id])
+  warranty Warranty @relation(fields: [warrantyId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
 
   @@unique([warrantyId, userId])
   @@index([warrantyId])
@@ -156,16 +219,16 @@ model WarrantyOwnership {
 }
 
 model Transfer {
-  id          String   @id @default(cuid())
-  warrantyId  String
-  fromUserId  String
-  toUserId    String
-  txHash      String   @unique
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  warrantyId String
+  fromUserId String
+  toUserId   String
+  txHash     String   @unique
+  createdAt  DateTime @default(now())
 
-  warranty    Warranty @relation(fields: [warrantyId], references: [id])
-  fromUser    User     @relation("FromUser", fields: [fromUserId], references: [id])
-  toUser      User     @relation("ToUser", fields: [toUserId], references: [id])
+  warranty Warranty @relation(fields: [warrantyId], references: [id])
+  fromUser User     @relation("FromUser", fields: [fromUserId], references: [id])
+  toUser   User     @relation("ToUser", fields: [toUserId], references: [id])
 
   @@index([warrantyId])
   @@index([txHash])
@@ -176,20 +239,20 @@ model Transfer {
 //////////////////////////////////////////////////////
 
 model Claim {
-  id          String      @id @default(cuid())
-  warrantyId  String
-  userId      String
-  type        ClaimType
-  status      ClaimStatus @default(PENDING)
-  reason      String?
-  fraudScore  Float?
-  isFraud     Boolean     @default(false)
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  id         String      @id @default(cuid())
+  warrantyId String
+  userId     String
+  type       ClaimType
+  status     ClaimStatus @default(PENDING)
+  reason     String?
+  fraudScore Float?
+  isFraud    Boolean     @default(false)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
 
-  warranty    Warranty    @relation(fields: [warrantyId], references: [id])
-  user        User        @relation(fields: [userId], references: [id])
-  logs        ClaimLog[]
+  warranty Warranty   @relation(fields: [warrantyId], references: [id])
+  user     User       @relation(fields: [userId], references: [id])
+  logs     ClaimLog[]
 
   @@index([warrantyId])
   @@index([userId])
@@ -202,20 +265,36 @@ model ClaimLog {
   note      String?
   createdAt DateTime    @default(now())
 
-  claim     Claim       @relation(fields: [claimId], references: [id])
+  claim Claim @relation(fields: [claimId], references: [id])
 }
 
 model WarrantyEvent {
-  id          String    @id @default(cuid())
-  warrantyId  String
-  type        EventType
-  txHash      String?
-  metadata    Json?     
-  createdAt   DateTime  @default(now())
+  id         String    @id @default(cuid())
+  warrantyId String
+  type       EventType
+  txHash     String?
+  metadata   Json?
+  createdAt  DateTime  @default(now())
 
-  warranty    Warranty  @relation(fields: [warrantyId], references: [id])
+  warranty Warranty @relation(fields: [warrantyId], references: [id])
 
   @@index([warrantyId])
+}
+
+//////////////////////////////////////////////////////
+// 📜 AUDIT SYSTEM
+//////////////////////////////////////////////////////
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String // e.g., "PRODUCT_ADDED"
+  entity    String // e.g., "WH-1000XM5"
+  details   String? // JSON string of changes
+  txHash    String? // If the action was on-chain
+  createdAt DateTime @default(now())
+
+  admin Admin @relation(fields: [adminId], references: [id])
 }
 
 //////////////////////////////////////////////////////
