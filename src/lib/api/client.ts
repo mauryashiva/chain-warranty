@@ -1,4 +1,5 @@
-import { baseUrl, API_BASE } from "./config";
+// ✅ FIXED: Added ADMIN_API_BASE to the import list here
+import { baseUrl, API_BASE, ADMIN_API_BASE } from "./config";
 
 export async function apiFetch<T>(
   endpoint: string,
@@ -27,7 +28,7 @@ export async function apiFetch<T>(
   return json?.data ?? json;
 }
 
-// ✅ New standardized fetcher for Admin routes
+// ✅ Admin Fetch Wrapper
 export async function adminApiFetch<T>(
   endpoint: string,
   options?: RequestInit,

@@ -1,0 +1,352 @@
+"use client";
+
+import { useRef, useState, useMemo } from "react";
+import {
+  X,
+  Globe,
+  Mail,
+  FileText,
+  Link as LinkIcon,
+  Image as ImageIcon,
+  ChevronDown,
+  Search,
+} from "lucide-react";
+import { useClickOutside } from "@/hooks/use-click-outside";
+import { cn } from "@/lib/utils";
+import { countryOptions, CountryOption } from "@/components/common/countries";
+
+interface AddBrandModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (data: any) => Promise<void> | void;
+}
+
+export default function AddBrandModal({
+  isOpen,
+  onClose,
+  onSave,
+}: AddBrandModalProps) {
+  const modalRef = useRef<HTMLDivElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // States
+  const [selectedCountry, setSelectedCountry] = useState<CountryOption>(
+    countryOptions.find((c) => c.iso === "in") || countryOptions[0],
+  );
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filter countries based on Name OR Dial Code
+  const filteredCountries = useMemo(() => {
+    const query = searchQuery.toLowerCase().replace("+", ""); // Remove + for easier number searching
+    return countryOptions.filter(
+      (c) =>
+        c.country.toLowerCase().includes(query) ||
+        c.code.replace("+", "").includes(query),
+    );
+  }, [searchQuery]);
+
+  useClickOutside(modalRef, onClose);
+  useClickOutside(dropdownRef, () => setIsDropdownOpen(false));
+
+  if (!isOpen) return null;
+
+  const labelClasses =
+    "text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2 block ml-1";
+  const inputClasses =
+    "w-full px-4 py-3.5 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 text-sm font-bold text-gray-900 dark:text-white outline-none transition-all placeholder:text-gray-400 focus:bg-white dark:focus:bg-gray-900 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 dark:focus:ring-blue-500/10 shadow-sm";
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const data = Object.fromEntries(formData.entries());
+
+    if (data.rawPhone) {
+      data.supportPhone = `${selectedCountry.code} ${data.rawPhone}`;
+    }
+    delete data.rawPhone;
+
+    await onSave(data);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-950/60 backdrop-blur-md animate-in fade-in duration-300">
+      <div
+        ref={modalRef}
+        className="relative w-full max-w-4xl bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden animate-in zoom-in-95 duration-300"
+      >
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-500" />
+
+        {/* Header */}
+        <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-800/60 flex items-center justify-between bg-white dark:bg-gray-900 z-10 relative">
+          <div>
+            <h2 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white uppercase">
+              Register Brand Identity
+            </h2>
+            <p className="text-xs font-bold text-gray-600 dark:text-gray-400 mt-1">
+              Initialize a new manufacturer in the blockchain catalog.
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2.5 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-full text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-all active:scale-95"
+          >
+            <X size={18} strokeWidth={3} />
+          </button>
+        </div>
+
+        <form
+          id="brandForm"
+          onSubmit={handleSubmit}
+          className="p-8 overflow-y-auto max-h-[65vh] custom-scrollbar"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+            {/* Brand Name */}
+            <div className="space-y-1">
+              <label className={labelClasses}>Brand Name *</label>
+              <input
+                name="name"
+                required
+                placeholder="e.g. Sony"
+                className={inputClasses}
+              />
+            </div>
+
+            {/* Brand Slug */}
+            <div className="space-y-1">
+              <label className={labelClasses}>Brand Slug *</label>
+              <div className="relative group">
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-black text-sm">
+                  /
+                </span>
+                <input
+                  name="slug"
+                  required
+                  placeholder="sony"
+                  className={cn(inputClasses, "pl-8 lowercase")}
+                />
+              </div>
+            </div>
+
+            {/* Country Text Input */}
+            <div className="space-y-1">
+              <label className={labelClasses}>Country of Origin *</label>
+              <div className="relative group">
+                <Globe
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={16}
+                  strokeWidth={2.5}
+                />
+                <input
+                  name="country"
+                  required
+                  placeholder="e.g. Japan"
+                  className={cn(inputClasses, "pl-12")}
+                />
+              </div>
+            </div>
+
+            {/* Website */}
+            <div className="space-y-1">
+              <label className={labelClasses}>Official Website</label>
+              <div className="relative group">
+                <LinkIcon
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={16}
+                  strokeWidth={2.5}
+                />
+                <input
+                  name="website"
+                  type="url"
+                  placeholder="https://sony.com"
+                  className={cn(inputClasses, "pl-12")}
+                />
+              </div>
+            </div>
+
+            {/* Phone Input with Multi-Search Dropdown */}
+            <div className="space-y-1" ref={dropdownRef}>
+              <label className={labelClasses}>Support Phone</label>
+              <div className="relative flex items-center group">
+                <div
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="absolute left-1 top-1/2 -translate-y-1/2 flex items-center z-20 pl-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 py-1.5 rounded-xl transition-colors"
+                >
+                  <div className="flex items-center gap-2 pr-1">
+                    <img
+                      src={`https://flagcdn.com/w40/${selectedCountry.iso}.png`}
+                      alt={selectedCountry.country}
+                      className="w-5 h-3.5 object-cover rounded-sm shadow-sm"
+                    />
+                    <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
+                      {selectedCountry.code}
+                    </span>
+                  </div>
+                  <ChevronDown
+                    size={14}
+                    strokeWidth={3}
+                    className={cn(
+                      "text-gray-400 ml-1 transition-transform",
+                      isDropdownOpen && "rotate-180",
+                    )}
+                  />
+                  <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 ml-3 mr-2" />
+                </div>
+
+                {/* Professional Dropdown */}
+                {isDropdownOpen && (
+                  <div className="absolute top-[calc(100%+8px)] left-0 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl z-[100] overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                    <div className="p-2 border-b border-gray-100 dark:border-gray-800">
+                      <div className="relative">
+                        <Search
+                          className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                          size={14}
+                        />
+                        <input
+                          autoFocus
+                          type="text"
+                          placeholder="Search country or code (e.g. 91)..."
+                          className="w-full bg-gray-50 dark:bg-gray-800/50 border-none rounded-lg py-2 pl-9 pr-4 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/20"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-60 overflow-y-auto custom-scrollbar p-1">
+                      {filteredCountries.length > 0 ? (
+                        filteredCountries.map((country) => (
+                          <button
+                            key={country.iso}
+                            type="button"
+                            onClick={() => {
+                              setSelectedCountry(country);
+                              setIsDropdownOpen(false);
+                              setSearchQuery("");
+                            }}
+                            className={cn(
+                              "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all text-left",
+                              selectedCountry.iso === country.iso
+                                ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600"
+                                : "hover:bg-gray-50 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-300",
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={`https://flagcdn.com/w40/${country.iso}.png`}
+                                className="w-5 h-3.5 object-cover rounded-sm"
+                                alt=""
+                              />
+                              <span className="text-xs font-bold truncate max-w-[140px]">
+                                {country.country}
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-black text-gray-600 dark:text-gray-500">
+                              {country.code}
+                            </span>
+                          </button>
+                        ))
+                      ) : (
+                        <div className="py-8 text-center text-xs font-bold text-gray-600">
+                          No results found
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                <input
+                  name="rawPhone"
+                  type="tel"
+                  placeholder="98765 43210"
+                  className={cn(inputClasses, "pl-36")}
+                />
+              </div>
+            </div>
+
+            {/* Email */}
+            <div className="space-y-1">
+              <label className={labelClasses}>Support Email</label>
+              <div className="relative group">
+                <Mail
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={16}
+                  strokeWidth={2.5}
+                />
+                <input
+                  name="supportEmail"
+                  type="email"
+                  placeholder="support@sony.com"
+                  className={cn(inputClasses, "pl-12")}
+                />
+              </div>
+            </div>
+
+            {/* Tax ID */}
+            <div className="space-y-1">
+              <label className={labelClasses}>GST / Tax ID</label>
+              <div className="relative group">
+                <FileText
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={16}
+                  strokeWidth={2.5}
+                />
+                <input
+                  name="taxId"
+                  placeholder="Tax Identification Number"
+                  className={cn(inputClasses, "pl-12")}
+                />
+              </div>
+            </div>
+
+            {/* Logo URL */}
+            <div className="space-y-1">
+              <label className={labelClasses}>Brand Logo URL</label>
+              <div className="relative group">
+                <ImageIcon
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                  size={16}
+                  strokeWidth={2.5}
+                />
+                <input
+                  name="logoUrl"
+                  type="url"
+                  placeholder="https://..."
+                  className={cn(inputClasses, "pl-12")}
+                />
+              </div>
+            </div>
+
+            {/* Description */}
+            <div className="md:col-span-2 space-y-1 pt-2">
+              <label className={labelClasses}>Brand Description</label>
+              <textarea
+                name="description"
+                rows={4}
+                placeholder="Briefly describe the brand..."
+                className={cn(inputClasses, "resize-none font-medium")}
+              />
+            </div>
+          </div>
+        </form>
+
+        {/* Footer */}
+        <div className="px-8 py-5 border-t border-gray-100 dark:border-gray-800/60 flex items-center justify-end gap-3 bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-sm">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-6 py-3.5 text-[11px] font-black text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-xl"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="brandForm"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 rounded-xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-blue-600/20 active:scale-[0.98] transition-all"
+          >
+            Save Brand
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

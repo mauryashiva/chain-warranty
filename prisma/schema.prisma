@@ -89,25 +89,53 @@ model Company {
 }
 
 model Brand {
-  id        String    @id @default(cuid())
-  name      String    @unique
-  slug      String    @unique
-  country   String
-  status    String    @default("Active")
-  createdAt DateTime  @default(now())
-  products  Product[]
+  id      String @id @default(cuid())
+  name    String @unique
+  slug    String @unique
+  country String
+  status  String @default("Active")
+
+  // 🔥 New Premium UI Fields
+  website      String?
+  supportEmail String?
+  supportPhone String?
+  taxId        String?
+  logoUrl      String?
+  description  String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  products Product[]
 }
 
 model Product {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
-  description String?
+  description String? @db.Text
   category    String?
-  sku         String?  @unique // Added for professional catalog tracking
-  companyId   String
-  brandId     String? // Link to the new Brand model
-  createdAt   DateTime @default(now())
-  isDeleted   Boolean  @default(false)
+  subCategory String?
+  sku         String? @unique
+
+  // Pricing & Warranty Specs mapped from Controller
+  warrantyPeriod String?
+  priceMin       Float?
+  priceMax       Float?
+  currency       String? @default("USD")
+
+  // Manufacturing & Compliance Metadata
+  launchDate         DateTime?
+  manufactureCountry String?
+  hsnCode            String?
+  variants           String? // Comma separated list
+  serialRegex        String?
+  termsUrl           String?
+  status             String    @default("Active")
+
+  companyId String
+  brandId   String? // Link to the Brand model
+  createdAt DateTime @default(now())
+  isDeleted Boolean  @default(false)
 
   company    Company    @relation(fields: [companyId], references: [id])
   brand      Brand?     @relation(fields: [brandId], references: [id])
