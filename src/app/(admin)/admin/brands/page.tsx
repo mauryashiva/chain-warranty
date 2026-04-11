@@ -4,13 +4,11 @@ import { useState } from "react";
 import {
   Plus,
   Search,
-  Filter,
-  MoreHorizontal,
-  Globe,
-  CheckCircle2,
-  XCircle,
   Loader2,
   AlertCircle,
+  Settings2,
+  Package2,
+  ShieldOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddBrandModal from "@/components/admin/brand/AddBrandModal";
@@ -20,21 +18,18 @@ export default function AdminBrandsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // 🔥 REAL DATA HOOK
-  // This hook will handle fetching (brands), loading states (isLoading), and actions (createBrand)
   const { brands, isLoading, error, createBrand, refresh } = useAdminBrands();
 
   const handleSaveBrand = async (formData: any) => {
     try {
       await createBrand(formData);
       setIsModalOpen(false);
-      refresh(); // Reload the list from the database
+      refresh();
     } catch (err) {
       console.error("Failed to save brand:", err);
     }
   };
 
-  // Filter logic for search
   const filteredBrands =
     brands?.filter(
       (b: any) =>
@@ -42,8 +37,11 @@ export default function AdminBrandsPage() {
         b.country.toLowerCase().includes(searchQuery.toLowerCase()),
     ) || [];
 
+  const labelClasses =
+    "text-[10px] font-black uppercase tracking-[0.15em] text-slate-800 dark:text-slate-200";
+
   return (
-    <div className="space-y-8 bg-white dark:bg-gray-900 min-h-screen">
+    <div className="space-y-10 bg-white dark:bg-gray-900 min-h-screen pb-24 px-6 md:px-10 pt-8">
       <AddBrandModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
@@ -51,107 +49,120 @@ export default function AdminBrandsPage() {
       />
 
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-100 dark:border-gray-800 pb-8">
         <div>
-          <h1 className="text-4xl font-black tracking-tighter text-gray-900 dark:text-white uppercase">
-            Brand Catalog
+          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
+            Brands
           </h1>
-          <p className="text-sm font-bold text-gray-600 dark:text-gray-400 mt-1">
-            System-level manufacturer registry for blockchain verification.
+          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight mt-1">
+            Manage all product brands registered in the system
           </p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-2xl font-black text-xs transition-all shadow-xl shadow-blue-600/20 active:scale-95"
+          className="flex items-center gap-2.5 bg-slate-900 dark:bg-white text-white dark:text-black px-10 py-4 rounded-2xl font-black text-[11px] tracking-widest transition-all hover:opacity-90 active:scale-95 shadow-xl shadow-slate-900/10 dark:shadow-none"
         >
-          <Plus size={18} strokeWidth={4} />
-          ADD NEW BRAND
+          <Plus size={16} strokeWidth={4} />
+          ADD BRAND
         </button>
       </div>
 
       {/* Error State */}
       {error && (
-        <div className="p-6 rounded-3xl bg-rose-500/10 border border-rose-500/20 flex items-center gap-4 text-rose-600">
-          <AlertCircle size={24} />
-          <p className="text-xs font-black uppercase tracking-widest">
+        <div className="p-6 rounded-4xl bg-rose-500/5 border border-rose-500/10 flex items-center gap-4 text-rose-600">
+          <AlertCircle size={20} strokeWidth={3} />
+          <p className="text-[10px] font-black uppercase tracking-widest">
             Error Loading Catalog: {error}
           </p>
         </div>
       )}
 
-      {/* Stats Overview (Dynamically calculated from real data) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {/* Stats Overview */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Total Brands", value: brands?.length || 0 },
+          { label: "Total brands", value: brands?.length || 0 },
           {
-            label: "Active Brands",
+            label: "Active",
             value:
               brands?.filter((b: any) => b.status === "Active").length || 0,
           },
-          { label: "System Uptime", value: "99.9%" },
+          {
+            label: "Products",
+            value:
+              brands?.reduce(
+                (acc: number, b: any) => acc + (b._count?.products || 0),
+                0,
+              ) || 0,
+          },
+          { label: "Warranties", value: "1.2k" },
         ].map((stat) => (
           <div
             key={stat.label}
-            className="p-8 rounded-[2.5rem] bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm"
+            className="bg-slate-50/50 dark:bg-gray-800/30 border border-slate-100 dark:border-gray-800 p-6 rounded-4xl"
           >
-            <p className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2">
-              {stat.label}
-            </p>
-            <p className="text-3xl font-black text-gray-900 dark:text-white">
+            <p className={labelClasses + " mb-3 opacity-60"}>{stat.label}</p>
+            <p className="text-3xl font-black text-gray-900 dark:text-white tabular-nums">
               {isLoading ? "---" : stat.value}
             </p>
           </div>
         ))}
       </div>
 
-      {/* Table Section */}
-      <div className="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-[3rem] overflow-hidden shadow-sm">
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-gray-900/50">
-          <div className="relative flex-1 max-w-md">
-            <Search
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-              size={16}
-            />
-            <input
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="SEARCH CATALOG..."
-              className="w-full pl-12 pr-4 py-4 bg-gray-100 dark:bg-gray-800 border-none rounded-2xl text-[11px] font-black outline-none focus:ring-2 ring-blue-600/20 transition-all text-gray-900 dark:text-white"
-            />
-          </div>
-        </div>
+      {/* Search Filter */}
+      <div className="relative max-w-md group">
+        <Search
+          className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors"
+          size={18}
+          strokeWidth={3}
+        />
+        <input
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="FILTER BY NAME OR COUNTRY..."
+          className="w-full pl-14 pr-6 py-5 bg-slate-50 dark:bg-gray-800/50 border border-slate-100 dark:border-gray-800 rounded-3xl text-[10px] font-black outline-none focus:ring-4 ring-blue-600/10 transition-all text-gray-900 dark:text-white placeholder:text-slate-400"
+        />
+      </div>
 
+      {/* Table Section */}
+      <div className="bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gray-50 dark:bg-gray-900/40">
-                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-500">
-                  Brand Identity
+              <tr className="bg-slate-50/50 dark:bg-gray-800/50">
+                <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
+                  Brand Name
                 </th>
-                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-500">
-                  Slug Path
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
+                  Slug
                 </th>
-                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-500">
-                  Location
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
+                  Country
                 </th>
-                <th className="px-8 py-5 text-[10px] font-black uppercase tracking-widest text-gray-500">
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 text-center">
+                  Products
+                </th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 text-center">
+                  Warranties Issued
+                </th>
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 text-center">
                   Status
                 </th>
-                <th className="px-8 py-5 text-right text-[10px] font-black uppercase tracking-widest text-gray-500">
+                <th className="px-10 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 text-center">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+            <tbody className="divide-y divide-slate-50 dark:divide-gray-800">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="py-20 text-center">
+                  <td colSpan={7} className="py-24 text-center">
                     <Loader2
                       className="animate-spin mx-auto text-blue-600 mb-4"
                       size={32}
+                      strokeWidth={3}
                     />
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                      Fetching Encrypted Records...
+                    <p className="text-[10px] font-black text-slate-800 dark:text-slate-200 uppercase tracking-[0.2em]">
+                      Synchronizing Registry...
                     </p>
                   </td>
                 </tr>
@@ -159,60 +170,80 @@ export default function AdminBrandsPage() {
                 filteredBrands.map((brand: any) => (
                   <tr
                     key={brand.id}
-                    className="hover:bg-white dark:hover:bg-gray-900/40 transition-colors group"
+                    className="hover:bg-slate-50/80 dark:hover:bg-gray-800/40 transition-colors group"
                   >
-                    <td className="px-8 py-6">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-blue-600 text-white flex items-center justify-center font-black text-lg shadow-lg shadow-blue-600/20">
-                          {brand.name[0]}
-                        </div>
-                        <span className="text-sm font-black text-gray-900 dark:text-white uppercase">
+                    {/* Brand Name & ID stacked vertically */}
+                    <td className="px-10 py-6 whitespace-nowrap">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[14px] font-black text-gray-900 dark:text-white uppercase tracking-tight">
                           {brand.name}
+                        </span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                          ID: {brand.id.slice(-7).toUpperCase()}
                         </span>
                       </div>
                     </td>
                     <td className="px-8 py-6">
-                      <code className="text-[10px] font-black text-blue-600 dark:text-blue-400 bg-blue-600/5 px-3 py-1.5 rounded-lg border border-blue-600/10">
-                        /{brand.slug}
-                      </code>
+                      <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 font-mono">
+                        {brand.slug}
+                      </span>
                     </td>
                     <td className="px-8 py-6">
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400 text-[11px] font-black uppercase tracking-tight">
-                        <Globe size={14} className="text-blue-500" />{" "}
+                      <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase">
                         {brand.country}
-                      </div>
+                      </span>
                     </td>
-                    <td className="px-8 py-6">
-                      <div
+                    <td className="px-8 py-6 text-center">
+                      <span className="text-[11px] font-black text-slate-900 dark:text-white tabular-nums">
+                        {brand._count?.products || 0}
+                      </span>
+                    </td>
+                    <td className="px-8 py-6 text-center">
+                      <span className="text-[11px] font-black text-slate-900 dark:text-white tabular-nums">
+                        {Math.floor(Math.random() * 500)}
+                      </span>
+                    </td>
+                    <td className="px-8 py-6 text-center">
+                      <span
                         className={cn(
-                          "inline-flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black tracking-[0.1em] uppercase border",
+                          "text-[9px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg border",
                           brand.status === "Active"
-                            ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:text-emerald-400"
-                            : "bg-gray-200 text-gray-500 border-gray-300 dark:bg-gray-900",
+                            ? "text-emerald-600 bg-emerald-500/5 border-emerald-500/10"
+                            : "text-slate-400 bg-slate-100/50 border-slate-200 dark:border-gray-800",
                         )}
                       >
-                        <div
-                          className={cn(
-                            "h-1.5 w-1.5 rounded-full",
-                            brand.status === "Active"
-                              ? "bg-emerald-500 animate-pulse"
-                              : "bg-gray-400",
-                          )}
-                        />
                         {brand.status}
-                      </div>
+                      </span>
                     </td>
-                    <td className="px-8 py-6 text-right">
-                      <button className="p-3 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-all border border-transparent hover:border-gray-200 dark:hover:border-gray-600">
-                        <MoreHorizontal size={20} className="text-gray-400" />
-                      </button>
+                    {/* Actions Centered */}
+                    <td className="px-10 py-6">
+                      <div className="flex items-center justify-center gap-2">
+                        <button
+                          title="Edit Brand"
+                          className="p-2.5 bg-slate-50 dark:bg-gray-800 text-slate-800 dark:text-slate-200 hover:bg-blue-600 hover:text-white transition-all rounded-xl border border-slate-100 dark:border-gray-700"
+                        >
+                          <Settings2 size={14} />
+                        </button>
+                        <button
+                          title="View Products"
+                          className="p-2.5 bg-slate-50 dark:bg-gray-800 text-slate-800 dark:text-slate-200 hover:bg-blue-600 hover:text-white transition-all rounded-xl border border-slate-100 dark:border-gray-700"
+                        >
+                          <Package2 size={14} />
+                        </button>
+                        <button
+                          title="Disable Brand"
+                          className="p-2.5 bg-slate-50 dark:bg-gray-800 text-slate-800 dark:text-slate-200 hover:bg-rose-600 hover:text-white transition-all rounded-xl border border-slate-100 dark:border-gray-700"
+                        >
+                          <ShieldOff size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="py-20 text-center">
-                    <p className="text-xs font-black text-gray-400 uppercase tracking-widest">
+                  <td colSpan={7} className="py-24 text-center">
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">
                       No matching brand records found
                     </p>
                   </td>

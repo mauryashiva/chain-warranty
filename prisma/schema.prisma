@@ -17,7 +17,6 @@ model User {
   updatedAt DateTime @updatedAt
   isDeleted Boolean  @default(false)
 
-  // Profile info from registration
   name  String?
   email String? @unique
   phone String?
@@ -30,6 +29,7 @@ model User {
   receivedTransfers Transfer[] @relation("ToUser")
 
   @@index([createdAt])
+  @@index([email])
 }
 
 model Wallet {
@@ -38,7 +38,6 @@ model Wallet {
   userId    String
   createdAt DateTime @default(now())
 
-  // 🔥 Industry Fix: Added Cascade Delete so no orphan wallets remain if a User is removed
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, address])
@@ -51,22 +50,28 @@ model Wallet {
 
 model Admin {
   id        String      @id @default(cuid())
-  wallet    String      @unique // The primary identifier for SIWE (MetaMask login)
+  wallet    String      @unique
   name      String
   email     String      @unique
   role      AdminRole   @default(CLAIMS_AGENT)
   status    AdminStatus @default(ACTIVE)
+  twoFAEnabled Boolean  @default(false)
   lastLogin DateTime?
   createdAt DateTime    @default(now())
+  updatedAt DateTime    @default(now()) @updatedAt
 
   auditLogs AuditLog[]
+
+  @@index([wallet])
+  @@index([role])
+  @@index([status])
 }
 
 enum AdminRole {
-  SUPER_ADMIN // Can do everything
-  BRAND_MANAGER // Manages Brands & Products
-  CLAIMS_AGENT // Only reviews and resolves claims
-  RETAILER_MANAGER // Manages Retailer list
+  SUPER_ADMIN
+  BRAND_MANAGER
+  CLAIMS_AGENT
+  RETAILER_MANAGER
 }
 
 enum AdminStatus {
@@ -80,90 +85,198 @@ enum AdminStatus {
 //////////////////////////////////////////////////////
 
 model Company {
-  id        String    @id @default(cuid())
-  name      String
-  website   String?
-  createdAt DateTime  @default(now())
-  isDeleted Boolean   @default(false)
-  brands    Brand[]
+  id          String   @id @default(cuid())
+  name        String   @unique
+  website     String?
+  description String?  @db.Text
+  logoUrl     String?
+  isDeleted   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+
+  brands Brand[]
+
+  @@index([name])
 }
 
 model Brand {
-  id      String @id @default(cuid())
-  name    String @unique
-  slug    String @unique
-  country String
-  status  String @default("Active")
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  country     String
+  status      BrandStatus @default(ACTIVE)
 
-  // 🔥 New Premium UI Fields
   website      String?
   supportEmail String?
   supportPhone String?
   taxId        String?
   logoUrl      String?
   description  String? @db.Text
-  companyId    String?
-  company      Company? @relation(fields: [companyId], references: [id])
 
+  // Company relation — optional
+  companyId String?
+  company   Company? @relation(fields: [companyId], references: [id])
+
+  retailers Retailer[]
+
+  isDeleted Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
 
   products Product[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([companyId])
+}
+
+enum BrandStatus {
+  ACTIVE
+  INACTIVE
 }
 
 model Product {
   id          String  @id @default(cuid())
   name        String
-  modelNumber        String    // 👈 Make sure this line exists!
+  modelNumber String
   description String? @db.Text
   category    String?
   subCategory String?
   sku         String? @unique
 
-  // Pricing & Warranty Specs mapped from Controller
-  warrantyPeriod String?
-  priceMin       Float?
-  priceMax       Float?
-  currency       String? @default("USD")
+  // Pricing
+  warrantyPeriodMonths Int?
+  warrantyPeriod       String?
+  priceMin             Float?
+  priceMax             Float?
+  currency             String? @default("USD")
 
-  // Manufacturing & Compliance Metadata
+  // Manufacturing & Compliance
   launchDate         DateTime?
   manufactureCountry String?
   hsnCode            String?
-  variants           String? // Comma separated list
+  variants           String?
   serialRegex        String?
   termsUrl           String?
-  status             String    @default("Active")
 
-  brandId   String? // Link to the Brand model
-  createdAt DateTime @default(now())
-  isDeleted Boolean  @default(false)
+  status    ProductStatus @default(ACTIVE)
+  isDeleted Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @default(now()) @updatedAt
 
-  brand      Brand?     @relation(fields: [brandId], references: [id])
-  warranties Warranty[]
+  // Brand relation — required
+  brandId String
+  brand   Brand  @relation(fields: [brandId], references: [id])
+
   serials    Serial[]
+  warranties Warranty[]
 
   @@index([brandId])
+  @@index([sku])
+  @@index([status])
+  @@index([category])
 }
 
-model Serial {
-  id           String       @id @default(cuid())
-  number       String       @unique
-  productId    String
-  batch        String?
-  mfgDate      DateTime
-  retailerName String?
-  status       SerialStatus @default(UNREGISTERED)
-  registeredBy String? // Wallet address if registered
+enum ProductStatus {
+  ACTIVE
+  INACTIVE
+  DISCONTINUED
+}
 
-  product Product @relation(fields: [productId], references: [id])
+//////////////////////////////////////////////////////
+// 🔢 SERIAL NUMBERS
+//////////////////////////////////////////////////////
+
+model Serial {
+  id String @id @default(cuid())
+
+  serialNumber    String    @unique
+  batchId         String?
+  manufactureDate DateTime?
+  dispatchDate    DateTime?
+
+  status    SerialStatus @default(UNREGISTERED)
+  isDeleted Boolean      @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  // Relations
+  productId  String
+  product    Product   @relation(fields: [productId], references: [id])
+
+  retailerId String?
+  retailer   Retailer? @relation(fields: [retailerId], references: [id])
+
+  // One serial = one warranty (unique)
+  warranty   Warranty? 
+
+  @@index([serialNumber])
+  @@index([productId])
+  @@index([retailerId])
+  @@index([status])
 }
 
 enum SerialStatus {
   UNREGISTERED
   REGISTERED
   FLAGGED
-  blocked
+  BLOCKED
+}
+
+//////////////////////////////////////////////////////
+// 🏪 RETAILERS
+//////////////////////////////////////////////////////
+
+model Retailer {
+  id   String @id @default(cuid())
+  name String @unique
+  slug String @unique
+
+  type RetailerType @default(BOTH)
+  
+  
+
+  contactEmail String?
+  contactPhone String?
+  website      String?
+
+  address String? @db.Text
+  city    String?
+  state   String?
+  pinCode String?
+  country String? @default("India")
+
+  gstNumber String? @unique
+  taxId     String?
+  panNumber String?
+
+  status    RetailerStatus @default(ACTIVE)
+  isDeleted Boolean        @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  serials    Serial[]
+  warranties Warranty[]
+  brands Brand[] // ← add this one line
+
+
+  @@index([slug])
+  @@index([status])
+  @@index([gstNumber])
+}
+
+enum RetailerType {
+  ONLINE
+  OFFLINE
+  BOTH
+}
+
+enum RetailerStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
 }
 
 //////////////////////////////////////////////////////
@@ -171,61 +284,86 @@ enum SerialStatus {
 //////////////////////////////////////////////////////
 
 model Warranty {
-  id              String @id @default(cuid())
-  tokenId         String @unique
-  contractAddress String
+  id String @id @default(cuid())
 
-  // Data captured from Step 01 & 03
+  // Blockchain data
+  tokenId         String  @unique
+  contractAddress String
+  ownerWallet     String?
+  ipfsMetadataUrl String?
+  txHash          String?
+  blockNumber     Int?
+  chainId         Int?    @default(137) // 137 = Polygon Mainnet
+
+  // Product snapshot — frozen at registration time
   productName      String?
   brand            String?
-  serialNumber     String?
-  imei             String?
   category         String?
   color            String?
   productCondition String?
+  imei             String?
+  serialNumber     String? // snapshot copy — source of truth is Serial.serialNumber
 
-  // Purchase Details
+  // Purchase details
   purchaseDate   DateTime
   warrantyPeriod String?
   expiryDate     DateTime
+  price          Decimal? @db.Decimal(10, 2)
+  invoiceNumber  String?
+  country        String?
 
-  // 🔥 Industry Fix: Decimal for currency accuracy
-  price Decimal? @db.Decimal(10, 2)
-
-  retailer      String?
-  invoiceNumber String?
-  country       String?
-
-  // Original Registrant Info (Snapshot)
+  // Owner snapshot at registration time
   ownerName  String?
   ownerEmail String?
   ownerPhone String?
 
-  // Cloud Storage Links (Supabase URLs)
+  // Media — Cloudinary / Supabase URLs
   frontPhotoUrl   String?
   backPhotoUrl    String?
   invoiceDocUrl   String?
   warrantyCardUrl String?
 
-  status    WarrantyStatus @default(ACTIVE)
+  // QR code
   qrCodeUrl String?
 
+  // Status
+  status    WarrantyStatus @default(ACTIVE)
+  isDeleted Boolean        @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Core relations
   productId String
   product   Product @relation(fields: [productId], references: [id])
 
-  // Relations
+  serialId String?  @unique
+  serial   Serial?  @relation(fields: [serialId], references: [id])
+
+  retailerId String?
+  retailer   Retailer? @relation(fields: [retailerId], references: [id])
+
+  // Activity relations
   ownerships WarrantyOwnership[]
   claims     Claim[]
   events     WarrantyEvent[]
   transfers  Transfer[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  isDeleted Boolean  @default(false)
-
   @@index([tokenId])
-  @@index([brand, serialNumber])
+  @@index([ownerWallet])
+  @@index([serialId])
+  @@index([status])
   @@index([ownerEmail])
+  @@index([productId])
+  @@index([expiryDate])
+}
+
+enum WarrantyStatus {
+  ACTIVE
+  EXPIRED
+  CLAIMED
+  TRANSFERRED
+  VOIDED
 }
 
 //////////////////////////////////////////////////////
@@ -237,6 +375,9 @@ model WarrantyOwnership {
   warrantyId String
   userId     String
   isActive   Boolean  @default(true)
+  fromWallet String?  // wallet at time of receiving
+  toWallet   String?  // wallet transferred to
+  acquiredAt DateTime @default(now())
   createdAt  DateTime @default(now())
 
   warranty Warranty @relation(fields: [warrantyId], references: [id])
@@ -245,15 +386,34 @@ model WarrantyOwnership {
   @@unique([warrantyId, userId])
   @@index([warrantyId])
   @@index([userId])
+  @@index([isActive])
 }
 
 model Transfer {
-  id         String   @id @default(cuid())
+  id         String         @id @default(cuid())
   warrantyId String
   fromUserId String
   toUserId   String
-  txHash     String   @unique
-  createdAt  DateTime @default(now())
+  txHash     String         @unique
+  status     TransferStatus @default(PENDING)
+
+  // Transfer details
+  fromWallet    String?
+  toWallet      String?
+  reason        String?  // SOLD, GIFT, INHERITED etc
+  salePrice     Decimal? @db.Decimal(10, 2)
+  transferDate  DateTime?
+
+  // ID verification
+  idType   String?
+  idNumber String?
+
+  // Document proof
+  saleAgreementUrl String?
+  idPhotoUrl       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   warranty Warranty @relation(fields: [warrantyId], references: [id])
   fromUser User     @relation("FromUser", fields: [fromUserId], references: [id])
@@ -261,6 +421,16 @@ model Transfer {
 
   @@index([warrantyId])
   @@index([txHash])
+  @@index([status])
+  @@index([fromUserId])
+  @@index([toUserId])
+}
+
+enum TransferStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+  REJECTED
 }
 
 //////////////////////////////////////////////////////
@@ -273,11 +443,18 @@ model Claim {
   userId     String
   type       ClaimType
   status     ClaimStatus @default(PENDING)
-  reason     String?
+  reason     String?     @db.Text
   fraudScore Float?
   isFraud    Boolean     @default(false)
-  createdAt  DateTime    @default(now())
-  updatedAt  DateTime    @updatedAt
+
+  // Resolution details
+  resolvedAt  DateTime?
+  resolvedBy  String?   // adminId who resolved
+  resolution  String?   @db.Text
+  txHash      String?   // on-chain resolution hash
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   warranty Warranty   @relation(fields: [warrantyId], references: [id])
   user     User       @relation(fields: [userId], references: [id])
@@ -285,16 +462,21 @@ model Claim {
 
   @@index([warrantyId])
   @@index([userId])
+  @@index([status])
+  @@index([isFraud])
 }
 
 model ClaimLog {
   id        String      @id @default(cuid())
   claimId   String
   status    ClaimStatus
-  note      String?
+  note      String?     @db.Text
+  changedBy String?     // adminId or userId
   createdAt DateTime    @default(now())
 
   claim Claim @relation(fields: [claimId], references: [id])
+
+  @@index([claimId])
 }
 
 model WarrantyEvent {
@@ -308,6 +490,8 @@ model WarrantyEvent {
   warranty Warranty @relation(fields: [warrantyId], references: [id])
 
   @@index([warrantyId])
+  @@index([type])
+  @@index([createdAt])
 }
 
 //////////////////////////////////////////////////////
@@ -317,13 +501,20 @@ model WarrantyEvent {
 model AuditLog {
   id        String   @id @default(cuid())
   adminId   String
-  action    String // e.g., "PRODUCT_ADDED"
-  entity    String // e.g., "WH-1000XM5"
-  details   String? // JSON string of changes
-  txHash    String? // If the action was on-chain
+  action    String
+  entity    String
+  entityId  String?  // id of the record affected
+  details   String?  @db.Text
+  txHash    String?
+  ipAddress String?  // admin IP for security
   createdAt DateTime @default(now())
 
   admin Admin @relation(fields: [adminId], references: [id])
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+  @@index([entityId])
 }
 
 //////////////////////////////////////////////////////
@@ -350,10 +541,5 @@ enum EventType {
   CLAIM_APPROVED
   CLAIM_REJECTED
   EXPIRED
-}
-
-enum WarrantyStatus {
-  ACTIVE
-  EXPIRED
-  VOID
+  VOIDED
 }

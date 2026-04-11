@@ -1,148 +1,259 @@
 "use client";
 
-import { useAdminSerials } from "@/hooks/admin/use-admin-serials";
+import { useState } from "react";
 import {
-  Hash,
-  Upload,
+  Plus,
   Search,
-  Filter,
-  ShieldCheck,
-  AlertCircle,
-  Eye,
+  FileSpreadsheet,
+  MoreHorizontal,
+  Loader2,
+  CheckCircle2,
+  ShieldAlert,
+  BarChart3,
+  Ban, // Icon for Blocked
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const STATS = [
-  { label: "Total Serials", value: "9.2k", icon: Hash },
-  {
-    label: "Registered",
-    value: "1.3k",
-    icon: ShieldCheck,
-    color: "text-emerald-600",
-  },
-  {
-    label: "Unregistered",
-    value: "7.9k",
-    icon: AlertCircle,
-    color: "text-slate-400",
-  },
-  { label: "Flagged", value: "12", icon: AlertCircle, color: "text-rose-600" },
-];
+import BulkUploadSerialsModal from "@/components/admin/serial/BulkUploadSerials";
+import { useAdminSerials } from "@/hooks/admin/use-admin-serials";
 
 export default function AdminSerialsPage() {
-  const { validateSerial, isValidating } = useAdminSerials();
+  const [isBulkOpen, setIsBulkOpen] = useState(false);
+  const [validateQuery, setValidateQuery] = useState("");
+
+  const {
+    serials = [],
+    loading = false,
+    stats = {
+      total: "0",
+      registered: "0",
+      unregistered: "0",
+      flagged: "0",
+      blocked: "0",
+    },
+    validateSerial,
+  } = useAdminSerials();
+
+  // Color constants for high-end feel
+  const labelClasses =
+    "text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 mb-1";
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex justify-between items-end">
+    <div className="space-y-10 min-h-screen bg-white dark:bg-gray-900 pb-24 px-6 md:px-10 pt-8">
+      {/* Header Area */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-100 dark:border-gray-800 pb-8">
         <div>
-          <h1 className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">
-            Serial Numbers
+          <h1 className="text-5xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">
+            Serial numbers
           </h1>
-          <p className="text-sm font-bold text-slate-500 dark:text-gray-400 mt-1">
-            Validate and manage authorized serial numbers per product.
+          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-2 uppercase tracking-[0.2em] opacity-80">
+            Validate and manage authorised serial numbers per product
           </p>
         </div>
-        <div className="flex gap-3">
-          <button className="flex items-center gap-2 px-4 py-3 bg-slate-100 dark:bg-gray-800 text-xs font-black rounded-xl">
-            <Upload size={16} /> BULK UPLOAD CSV
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setIsBulkOpen(true)}
+            className="flex items-center gap-2.5 bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 text-slate-900 dark:text-white px-7 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm active:scale-[0.98]"
+          >
+            <FileSpreadsheet size={15} strokeWidth={2.5} />
+            Bulk upload CSV
           </button>
-          <button className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-xs shadow-lg shadow-blue-600/20">
-            + ADD SINGLE
+          <button className="flex items-center gap-2.5 bg-blue-600 text-white px-7 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-2xl shadow-blue-600/30 transition-all hover:bg-blue-700 active:scale-[0.98]">
+            <Plus size={15} strokeWidth={4} />
+            Add single
           </button>
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-        {STATS.map((stat) => (
+      {/* Stats Cards - Added Blocked Status */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+        {[
+          {
+            label: "Total serials",
+            value: stats?.total || "0",
+            icon: <BarChart3 size={14} />,
+          },
+          {
+            label: "Registered",
+            value: stats?.registered || "0",
+            icon: <CheckCircle2 size={14} />,
+          },
+          {
+            label: "Unregistered",
+            value: stats?.unregistered || "0",
+            icon: <Search size={14} />,
+          },
+          {
+            label: "Flagged",
+            value: stats?.flagged || "0",
+            icon: <ShieldAlert size={14} />,
+          },
+          {
+            label: "Blocked",
+            value: stats?.blocked || "0",
+            icon: <Ban size={14} />,
+          },
+        ].map((s) => (
           <div
-            key={stat.label}
-            className="p-6 rounded-3xl bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800"
+            key={s.label}
+            className="bg-slate-50/50 dark:bg-gray-800/30 border border-slate-100 dark:border-gray-800 p-6 rounded-4xl"
           >
-            <div className="flex justify-between items-start mb-4">
-              <stat.icon size={20} className="text-slate-400" />
+            <div className="flex items-center gap-2 mb-3 opacity-60">
+              <span className="text-slate-900 dark:text-white">{s.icon}</span>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
+                {s.label}
+              </p>
             </div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-              {stat.label}
-            </p>
-            <p
-              className={cn(
-                "text-2xl font-black mt-1",
-                stat.color || "text-slate-900 dark:text-white",
-              )}
-            >
-              {stat.value}
+            <p className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">
+              {s.value}
             </p>
           </div>
         ))}
       </div>
 
-      {/* Validator Search (Industry Standard) */}
-      <div className="p-8 rounded-3xl bg-slate-950 text-white space-y-4">
-        <label className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">
-          Validate a Serial Number
+      {/* Validation Search Bar */}
+      <div className="max-w-3xl">
+        <label className={labelClasses + " ml-1"}>
+          Validate a serial number
         </label>
-        <div className="flex gap-4">
+        <div className="mt-2 group relative bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-2xl flex items-center shadow-lg shadow-slate-200/20 dark:shadow-none overflow-hidden focus-within:ring-4 ring-blue-600/10 transition-all">
+          <div className="pl-6 text-slate-400">
+            <Search size={18} strokeWidth={3} />
+          </div>
           <input
-            placeholder="Enter serial number to validate... e.g. SN-2024-48291"
-            className="flex-1 bg-white/10 border border-white/10 rounded-2xl px-6 py-4 text-sm font-bold outline-none focus:ring-2 ring-blue-500"
+            value={validateQuery}
+            onChange={(e) => setValidateQuery(e.target.value)}
+            placeholder="Enter serial number to validate e.g. SN-2024-48291"
+            className="w-full flex-1 px-4 py-5 bg-transparent outline-none font-bold text-sm text-slate-900 dark:text-white placeholder:text-slate-300"
           />
-          <button className="bg-white text-slate-950 px-8 py-4 rounded-2xl font-black text-xs hover:bg-blue-500 hover:text-white transition-all">
-            VALIDATE
+          <button
+            onClick={() => validateSerial(validateQuery)}
+            className="mr-2 px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black text-[11px] uppercase tracking-widest rounded-xl hover:opacity-90 transition-all active:scale-[0.97]"
+          >
+            Validate
           </button>
         </div>
       </div>
 
-      {/* Table Section */}
-      <div className="bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-3xl overflow-hidden shadow-sm">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50/50 dark:bg-gray-800/30">
-            <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400 border-b border-slate-100 dark:border-gray-800">
-              <th className="px-6 py-4">Serial Number</th>
-              <th className="px-6 py-4">Product</th>
-              <th className="px-6 py-4">Batch</th>
-              <th className="px-6 py-4">Mfg Date</th>
-              <th className="px-6 py-4">Status</th>
-              <th className="px-6 py-4">Registered By</th>
-              <th className="px-6 py-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-gray-800">
-            {[1, 2, 3].map((i) => (
-              <tr
-                key={i}
-                className="hover:bg-slate-50/50 dark:hover:bg-gray-800/20 transition-colors"
-              >
-                <td className="px-6 py-4 font-mono text-[11px] font-black text-slate-950 dark:text-white">
-                  SN-2023-48291
-                </td>
-                <td className="px-6 py-4 text-xs font-bold">Sony WH-1000XM5</td>
-                <td className="px-6 py-4 text-xs font-bold text-slate-400">
-                  LOT-23-Q1
-                </td>
-                <td className="px-6 py-4 text-xs font-bold text-slate-400">
-                  Jan 2023
-                </td>
-                <td className="px-6 py-4">
-                  <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 text-[9px] font-black uppercase">
-                    Registered
-                  </span>
-                </td>
-                <td className="px-6 py-4 font-mono text-[10px] font-bold text-blue-600">
-                  0x114D...66ed
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <button className="p-2 hover:bg-slate-100 dark:hover:bg-gray-800 rounded-lg transition-all">
-                    <Eye size={16} className="text-slate-400" />
-                  </button>
-                </td>
+      {/* Serials Table Area */}
+      <div className="bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="bg-slate-50/50 dark:bg-gray-800/50">
+                <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
+                  Serial Number
+                </th>
+                <th className="px-4 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
+                  Product
+                </th>
+                <th className="px-4 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
+                  Batch
+                </th>
+                <th className="px-4 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
+                  Mfg Date
+                </th>
+                <th className="px-4 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
+                  Retailer
+                </th>
+                <th className="px-4 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
+                  Status
+                </th>
+                <th className="px-4 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 text-center">
+                  Registered By
+                </th>
+                <th className="px-8 py-6 text-right text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
+                  Actions
+                </th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody className="divide-y divide-slate-50 dark:divide-gray-800">
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="py-24 text-center">
+                    <Loader2
+                      className="animate-spin mx-auto text-blue-600"
+                      size={30}
+                      strokeWidth={3}
+                    />
+                  </td>
+                </tr>
+              ) : serials.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="py-24 text-center">
+                    <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">
+                      No serials found in registry
+                    </p>
+                  </td>
+                </tr>
+              ) : (
+                serials.map((serial: any) => (
+                  <tr
+                    key={serial.id}
+                    className="hover:bg-slate-50/80 dark:hover:bg-gray-800/40 transition-colors group"
+                  >
+                    <td className="px-8 py-6 font-mono text-[13px] font-bold text-slate-900 dark:text-white uppercase tracking-tighter">
+                      {serial.serialNumber}
+                    </td>
+                    <td className="px-4 py-6">
+                      <p className="text-[11px] font-black uppercase text-slate-900 dark:text-white">
+                        {serial.product?.name}
+                      </p>
+                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                        {serial.product?.brand?.name}
+                      </p>
+                    </td>
+                    <td className="px-4 py-6 text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase">
+                      {serial.batchId || "—"}
+                    </td>
+                    <td className="px-4 py-6 text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase">
+                      {serial.manufactureDate
+                        ? new Date(serial.manufactureDate).toLocaleDateString(
+                            "en-US",
+                            { month: "short", year: "numeric" },
+                          )
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-6 text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase">
+                      {serial.retailer?.name || "Unassigned"}
+                    </td>
+                    <td className="px-4 py-6">
+                      <span
+                        className={cn(
+                          "text-[9px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg border",
+                          serial.status === "REGISTERED"
+                            ? "text-emerald-600 bg-emerald-500/5 border-emerald-500/10"
+                            : serial.status === "FLAGGED"
+                              ? "text-rose-600 bg-rose-500/5 border-rose-500/10"
+                              : serial.status === "BLOCKED"
+                                ? "text-slate-950 dark:text-white bg-slate-950/10 dark:bg-white/10 border-slate-950/20 dark:border-white/20"
+                                : "text-blue-600 bg-blue-500/5 border-blue-500/10",
+                        )}
+                      >
+                        {serial.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-6 text-center font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                      {serial.registeredBy
+                        ? `${serial.registeredBy.slice(0, 6)}...${serial.registeredBy.slice(-4)}`
+                        : "—"}
+                    </td>
+                    <td className="px-8 py-6 text-right">
+                      <button className="bg-slate-100 dark:bg-gray-800 p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all">
+                        <MoreHorizontal size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      <BulkUploadSerialsModal
+        isOpen={isBulkOpen}
+        onClose={() => setIsBulkOpen(false)}
+      />
     </div>
   );
 }
