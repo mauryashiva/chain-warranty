@@ -31,15 +31,14 @@ export const ProductController = {
     }
 
     // 2. Check for SKU uniqueness (Case-insensitive check)
-    if (data.sku) {
-      const existingSku = await prisma.product.findUnique({
-        where: { sku: data.sku.toUpperCase() },
-      });
-      if (existingSku) {
-        throw new Error(
-          `SKU ${data.sku.toUpperCase()} already exists in the catalog.`,
-        );
-      }
+    const normalizedSku = data.sku.trim().toUpperCase();
+
+    const existingSku = await prisma.product.findUnique({
+      where: { sku: normalizedSku },
+    });
+
+    if (existingSku) {
+      throw new Error(`SKU ${normalizedSku} already exists in the catalog.`);
     }
 
     // 3. Data Transformation & Database Insertion
@@ -47,19 +46,25 @@ export const ProductController = {
       data: {
         name: data.name,
         modelNumber: data.modelNumber,
-        sku: data.sku.toUpperCase(), // Standardize storage
+        sku: normalizedSku, // Standardize storage
         category: data.category,
         subCategory: data.subCategory,
 
-        // Relational Link (Company removed as per new architecture)
+        // Relational Link
         brandId: data.brandId,
 
         description: data.description,
 
-        // Data Type Parsing
+        // Data Type Parsing with safety checks
         warrantyPeriod: data.warrantyPeriod?.toString(),
-        priceMin: data.priceMin ? parseFloat(data.priceMin) : null,
-        priceMax: data.priceMax ? parseFloat(data.priceMax) : null,
+        priceMin:
+          data.priceMin && data.priceMin !== ""
+            ? parseFloat(data.priceMin)
+            : null,
+        priceMax:
+          data.priceMax && data.priceMax !== ""
+            ? parseFloat(data.priceMax)
+            : null,
         currency: data.currency || "USD",
 
         // Date Handling
@@ -72,7 +77,10 @@ export const ProductController = {
         serialRegex: data.serialRegex,
         termsUrl: data.termsUrl,
 
-        status: "Active",
+        // ✅ FIXED: Force status to UPPERCASE to match Prisma Enum (ACTIVE, INACTIVE, etc.)
+        // If data.status is "Active" or "active", it becomes "ACTIVE"
+        status: data.status ? data.status.toUpperCase() : "ACTIVE",
+
         isDeleted: false,
       },
       include: {

@@ -39,7 +39,7 @@ export const BrandController = {
         name: data.name,
         slug: data.slug.toLowerCase().replace(/\s+/g, "-"),
         country: data.country,
-        status: data.status || "Active",
+        status: data.status ? data.status.toUpperCase() : "ACTIVE",
 
         // 🔥 New Premium UI Fields mapped here!
         website: data.website,
@@ -89,9 +89,14 @@ export const BrandController = {
       description: string;
     }>,
   ) {
+    const updateData = {
+      ...data,
+      ...(data.status && { status: data.status.toUpperCase() }),
+    };
+
     return await prisma.brand.update({
       where: { id },
-      data,
+      data: updateData as any,
     });
   },
 };

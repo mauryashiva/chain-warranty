@@ -12,11 +12,16 @@ import {
   Truck,
   Store,
   FileText,
+  Keyboard,
+  Loader2,
 } from "lucide-react";
 import { useAdminBrands } from "@/hooks/admin/use-admin-brands";
 import { useAdminProducts } from "@/hooks/admin/use-admin-products";
+import { useAdminSerials } from "@/hooks/admin/use-admin-serials";
+import { useAdminRetailers } from "@/hooks/admin/use-admin-retailers"; // Added hook
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { cn } from "@/lib/utils";
+import Papa from "papaparse";
 
 interface BulkUploadSerialsModalProps {
   isOpen: boolean;
@@ -31,17 +36,89 @@ export default function BulkUploadSerialsModal({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [selectedBrand, setSelectedBrand] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState("");
+  const [batchId, setBatchId] = useState("");
+  const [mfgDate, setMfgDate] = useState("");
+  const [dispatchDate, setDispatchDate] = useState("");
+  const [retailerId, setRetailerId] = useState("");
+
   const [isDragging, setIsDragging] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [manualSerials, setManualSerials] = useState("");
+  const [entryMode, setEntryMode] = useState<"file" | "manual">("file");
+  const [isUploading, setIsUploading] = useState(false);
 
   const { brands } = useAdminBrands();
   const { products } = useAdminProducts();
+  const { uploadSerials } = useAdminSerials();
+  const { retailers } = useAdminRetailers(); // Fetching retailers
 
   useClickOutside(modalRef, onClose);
 
   if (!isOpen) return null;
 
-  // --- Handlers ---
+  // --- CSV Parser ---
+  const parseCSV = (file: File): Promise<string[]> => {
+    return new Promise((resolve) => {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: (results) => {
+          const serials = results.data
+            .map((row: any) => row.serial_number)
+            .filter(Boolean);
+          resolve(serials);
+        },
+      });
+    });
+  };
+
+  // --- Final Submit Handler ---
+  const handleSubmit = async () => {
+    try {
+      setIsUploading(true);
+      let serialList: string[] = [];
+
+      if (entryMode === "file" && file) {
+        serialList = await parseCSV(file);
+      } else {
+        serialList = manualSerials
+          .split("\n")
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0);
+      }
+
+      if (serialList.length === 0) {
+        alert("No valid serial numbers found.");
+        return;
+      }
+
+      await uploadSerials({
+        serials: serialList,
+        productId: selectedProduct,
+        batchId: batchId,
+        manufactureDate: mfgDate,
+        dispatchDate: dispatchDate,
+        retailerId: retailerId,
+      });
+
+      onClose();
+      // Reset form
+      setFile(null);
+      setManualSerials("");
+      setSelectedBrand("");
+      setSelectedProduct("");
+      setBatchId("");
+      setMfgDate("");
+      setDispatchDate("");
+      setRetailerId("");
+    } catch (err: any) {
+      alert(err.message || "Upload failed");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (selectedFile) setFile(selectedFile);
@@ -52,36 +129,26 @@ export default function BulkUploadSerialsModal({
     setIsDragging(true);
   };
 
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
     const droppedFile = e.dataTransfer.files?.[0];
     if (droppedFile && droppedFile.type === "text/csv") {
       setFile(droppedFile);
-    } else {
-      alert("Please upload a valid CSV file.");
+      setEntryMode("file");
     }
   };
 
-  const removeFile = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  // Updated text colors: slate-800 for light, slate-200 for dark
   const labelClasses =
     "text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 mb-2 block ml-1";
-
   const inputClasses =
     "w-full px-4 py-3.5 rounded-2xl bg-slate-50 dark:bg-gray-800/50 border border-slate-100 dark:border-gray-800 text-sm font-bold text-slate-900 dark:text-white outline-none transition-all focus:bg-white dark:focus:bg-gray-900 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 appearance-none";
-
   const helperTextClasses =
     "text-[10px] font-bold uppercase tracking-widest text-slate-800 dark:text-slate-200";
+
+  const isFormValid =
+    selectedProduct !== "" &&
+    (file !== null || manualSerials.trim().length > 0);
 
   return (
     <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-200">
@@ -112,14 +179,12 @@ export default function BulkUploadSerialsModal({
         {/* Form Body */}
         <div className="p-10 space-y-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
-            {/* Brand Select */}
             <div className="space-y-1">
               <label className={labelClasses}>Brand *</label>
               <div className="relative group">
                 <Layers
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors"
                   size={16}
-                  strokeWidth={2}
                 />
                 <select
                   className={cn(inputClasses, "pl-12")}
@@ -140,16 +205,18 @@ export default function BulkUploadSerialsModal({
               </div>
             </div>
 
-            {/* Product Select */}
             <div className="space-y-1">
               <label className={labelClasses}>Product / SKU *</label>
               <div className="relative group">
                 <Package
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors"
                   size={16}
-                  strokeWidth={2}
                 />
-                <select className={cn(inputClasses, "pl-12")}>
+                <select
+                  className={cn(inputClasses, "pl-12")}
+                  value={selectedProduct}
+                  onChange={(e) => setSelectedProduct(e.target.value)}
+                >
                   <option value="">Select product</option>
                   {products
                     ?.filter(
@@ -171,6 +238,8 @@ export default function BulkUploadSerialsModal({
             <div className="space-y-1">
               <label className={labelClasses}>Batch / Lot Number</label>
               <input
+                value={batchId}
+                onChange={(e) => setBatchId(e.target.value)}
                 placeholder="e.g. LOT-2024-Q2-IN"
                 className={inputClasses}
               />
@@ -185,6 +254,8 @@ export default function BulkUploadSerialsModal({
                 />
                 <input
                   type="date"
+                  value={mfgDate}
+                  onChange={(e) => setMfgDate(e.target.value)}
                   className={cn(inputClasses, "pl-12 dark:color-scheme-dark")}
                 />
               </div>
@@ -199,6 +270,8 @@ export default function BulkUploadSerialsModal({
                 />
                 <input
                   type="date"
+                  value={dispatchDate}
+                  onChange={(e) => setDispatchDate(e.target.value)}
                   className={cn(inputClasses, "pl-12 dark:color-scheme-dark")}
                 />
               </div>
@@ -211,8 +284,17 @@ export default function BulkUploadSerialsModal({
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors"
                   size={16}
                 />
-                <select className={cn(inputClasses, "pl-12")}>
+                <select
+                  className={cn(inputClasses, "pl-12")}
+                  value={retailerId}
+                  onChange={(e) => setRetailerId(e.target.value)}
+                >
                   <option value="">All retailers</option>
+                  {retailers?.map((r: any) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
+                    </option>
+                  ))}
                 </select>
                 <ChevronDown
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
@@ -222,71 +304,70 @@ export default function BulkUploadSerialsModal({
             </div>
           </div>
 
-          {/* Drag & Drop Logic */}
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
-            className={cn(
-              "group border-2 border-dashed rounded-[2.5rem] p-12 flex flex-col items-center justify-center gap-4 transition-all cursor-pointer",
-              isDragging
-                ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20"
-                : "border-slate-200 dark:border-gray-800 bg-slate-50/30 dark:bg-gray-800/20 hover:border-blue-500 hover:bg-blue-50/50 dark:hover:bg-blue-900/10",
-            )}
-          >
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              accept=".csv"
-              className="hidden"
-            />
-
-            {file ? (
-              <div className="flex flex-col items-center gap-3 animate-in zoom-in-95 duration-300">
-                <div className="p-5 bg-emerald-500/10 text-emerald-600 rounded-2xl relative">
-                  <FileText size={32} strokeWidth={2.5} />
-                  <button
-                    onClick={removeFile}
-                    className="absolute -top-2 -right-2 p-1 bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-full text-rose-500 hover:scale-110 transition-transform shadow-sm"
-                  >
-                    <X size={14} strokeWidth={3} />
-                  </button>
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                    {file.name}
-                  </p>
-                  <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mt-1">
-                    File attached - {(file.size / 1024).toFixed(1)} KB
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="p-5 bg-blue-600/10 text-blue-600 rounded-2xl group-hover:scale-105 transition-transform duration-300">
-                  <Upload size={32} strokeWidth={2.5} />
-                </div>
-                <div className="text-center">
-                  <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">
-                    Drop CSV file here or click to upload
-                  </p>
-                  <p
-                    className={cn(
-                      helperTextClasses,
-                      "mt-1 lowercase font-medium opacity-60",
-                    )}
-                  >
-                    format:{" "}
-                    <span className="font-black text-blue-600">
-                      serial_number, product_sku, manufacture_date, batch_id
-                    </span>
-                  </p>
-                </div>
-              </>
-            )}
+          <div className="flex gap-4 border-b border-slate-50 dark:border-gray-800 pb-2">
+            {["file", "manual"].map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setEntryMode(mode as any)}
+                className={cn(
+                  "text-[10px] font-black uppercase tracking-widest pb-2 px-2 transition-all",
+                  entryMode === mode
+                    ? "text-blue-600 border-b-2 border-blue-600"
+                    : "text-slate-400",
+                )}
+              >
+                {mode === "file" ? "CSV Upload" : "Manual Entry"}
+              </button>
+            ))}
           </div>
+
+          {entryMode === "file" ? (
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              className={cn(
+                "group border-2 border-dashed rounded-[2.5rem] p-12 flex flex-col items-center justify-center gap-4 transition-all cursor-pointer",
+                isDragging
+                  ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20"
+                  : "border-slate-200 dark:border-gray-800 bg-slate-50/30 dark:bg-gray-800/20 hover:border-blue-500",
+              )}
+            >
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".csv"
+                className="hidden"
+              />
+              {file ? (
+                <div className="text-center">
+                  <FileText
+                    className="mx-auto text-emerald-500 mb-2"
+                    size={32}
+                  />
+                  <p className="text-sm font-black uppercase">{file.name}</p>
+                </div>
+              ) : (
+                <div className="text-center">
+                  <Upload className="mx-auto text-blue-600 mb-2" size={32} />
+                  <p className="text-sm font-black uppercase">
+                    Drop CSV or Click to Upload
+                  </p>
+                </div>
+              )}
+            </div>
+          ) : (
+            <textarea
+              value={manualSerials}
+              onChange={(e) => setManualSerials(e.target.value)}
+              placeholder="SN-2024-001&#10;SN-2024-002"
+              className={cn(
+                inputClasses,
+                "min-h-40 py-4 resize-none font-mono text-xs",
+              )}
+            />
+          )}
         </div>
 
         {/* Footer */}
@@ -294,27 +375,31 @@ export default function BulkUploadSerialsModal({
           <div className="flex items-center gap-3">
             <Info size={14} className="text-blue-600" strokeWidth={3} />
             <p className={helperTextClasses}>
-              CSV must have columns: serial_number, sku, manufacture_date,
-              batch_id.
+              Registry requires unique serial numbers per SKU.
             </p>
           </div>
           <div className="flex gap-4">
             <button
               onClick={onClose}
-              className="px-8 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors"
+              className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500"
             >
               Cancel
             </button>
             <button
-              disabled={!file}
+              onClick={handleSubmit}
+              disabled={!isFormValid || isUploading}
               className={cn(
-                "px-10 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl transition-all",
-                file
-                  ? "bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/20 active:scale-95"
-                  : "bg-slate-200 dark:bg-gray-800 text-slate-400 cursor-not-allowed",
+                "px-10 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all",
+                isFormValid && !isUploading
+                  ? "bg-blue-600 text-white shadow-xl active:scale-95"
+                  : "bg-slate-200 text-slate-400 cursor-not-allowed",
               )}
             >
-              Upload & Validate
+              {isUploading ? (
+                <Loader2 className="animate-spin" size={16} />
+              ) : (
+                "Upload & Validate"
+              )}
             </button>
           </div>
         </div>

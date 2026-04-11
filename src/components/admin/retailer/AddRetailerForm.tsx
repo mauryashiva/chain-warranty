@@ -34,15 +34,18 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
   const { brands, isLoading: isLoadingBrands } = useAdminBrands();
   const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>([]);
 
+  // Phone Selection
   const [selectedPhoneCountry, setSelectedPhoneCountry] =
     useState<CountryOption>(
       countryOptions.find((c) => c.iso === "in") || countryOptions[0],
     );
 
+  // Geographic State
   const [selectedCountry, setSelectedCountry] = useState<any>(null);
   const [selectedState, setSelectedState] = useState<any>(null);
   const [selectedCity, setSelectedCity] = useState<any>(null);
 
+  // Dropdown UI State
   const [openDropdown, setOpenDropdown] = useState<
     "phone" | "country" | "state" | "city" | null
   >(null);
@@ -114,10 +117,10 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
     const finalData = {
       ...data,
       contactPhone: `${selectedPhoneCountry.code} ${data.rawPhone}`,
-      country: selectedCountry?.name,
+      country: selectedCountry?.name || "India",
       state: selectedState?.name,
       city: selectedCity?.name,
-      brandIds: selectedBrandIds, // Connect brands to this retailer
+      brandIds: selectedBrandIds,
     };
 
     delete (finalData as any).rawPhone;
@@ -145,6 +148,7 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
       className="bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-800 rounded-[3rem] p-10 shadow-xl"
       ref={formContainerRef}
     >
+      {/* Header */}
       <div className="flex items-center gap-4 mb-8">
         <div className="p-3 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
           <Store size={24} />
@@ -160,8 +164,8 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
+        {/* Core Info Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-6">
-          {/* Retailer Name */}
           <div className="space-y-1">
             <label className={labelClasses}>Retailer name *</label>
             <input
@@ -172,7 +176,6 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
             />
           </div>
 
-          {/* Retailer Type */}
           <div className="space-y-1">
             <label className={labelClasses}>Retailer type *</label>
             <div className="relative">
@@ -191,7 +194,6 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
             </div>
           </div>
 
-          {/* Contact Email */}
           <div className="space-y-1">
             <label className={labelClasses}>Contact email *</label>
             <div className="relative">
@@ -209,7 +211,7 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
             </div>
           </div>
 
-          {/* Phone Input */}
+          {/* Contact Phone */}
           <div className="space-y-1 relative">
             <label className={labelClasses}>Contact phone</label>
             <div className="relative flex items-center group">
@@ -241,7 +243,6 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
                 placeholder="98765 43210"
                 className={cn(inputClasses, "pl-28 cursor-text")}
               />
-
               {openDropdown === "phone" && (
                 <div className="absolute top-[calc(100%+8px)] left-0 w-64 bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-800 rounded-2xl shadow-2xl z-50 overflow-hidden">
                   <div className="p-2 border-b border-slate-50 dark:border-gray-800">
@@ -263,7 +264,7 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
                           setOpenDropdown(null);
                           setSearchQuery("");
                         }}
-                        className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-gray-800/50 text-[10px] font-bold"
+                        className="w-full flex items-center justify-between px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-gray-800/50 text-[10px] font-bold text-slate-800 dark:text-slate-200"
                       >
                         <div className="flex items-center gap-2">
                           <img
@@ -282,7 +283,6 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
             </div>
           </div>
 
-          {/* Website */}
           <div className="space-y-1">
             <label className={labelClasses}>Official Website</label>
             <div className="relative">
@@ -299,7 +299,6 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
             </div>
           </div>
 
-          {/* GST Number */}
           <div className="space-y-1">
             <label className={labelClasses}>GST number *</label>
             <div className="relative">
@@ -319,7 +318,7 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
             </div>
           </div>
 
-          {/* PAN Number */}
+          {/* Compliance & Tax */}
           <div className="space-y-1">
             <label className={labelClasses}>PAN Number</label>
             <div className="relative">
@@ -338,7 +337,6 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
             </div>
           </div>
 
-          {/* Tax ID */}
           <div className="space-y-1">
             <label className={labelClasses}>Tax ID</label>
             <div className="relative">
@@ -354,13 +352,13 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
             </div>
           </div>
 
-          {/* Country Selection */}
+          {/* Geographic Selectors */}
           <div className="space-y-1 relative">
             <label className={labelClasses}>Country *</label>
             <div
               onClick={() => {
                 loadLocationData();
-                setOpenDropdown(openDropdown === "country" ? null : "country");
+                setOpenDropdown("country");
               }}
               className={inputClasses}
             >
@@ -409,7 +407,7 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
                         setOpenDropdown(null);
                         setSearchQuery("");
                       }}
-                      className="w-full px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-gray-800/50 text-[10px] font-bold text-left flex items-center gap-3"
+                      className="w-full px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-gray-800/50 text-[10px] font-bold text-left flex items-center gap-3 text-slate-800 dark:text-slate-200"
                     >
                       <img
                         src={`https://flagcdn.com/w40/${c.iso2.toLowerCase()}.png`}
@@ -424,13 +422,11 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
             )}
           </div>
 
-          {/* State Selection */}
           <div className="space-y-1 relative">
             <label className={labelClasses}>State / Province *</label>
             <div
               onClick={() => {
-                if (selectedCountry)
-                  setOpenDropdown(openDropdown === "state" ? null : "state");
+                if (selectedCountry) setOpenDropdown("state");
               }}
               className={cn(
                 inputClasses,
@@ -471,7 +467,7 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
                         setOpenDropdown(null);
                         setSearchQuery("");
                       }}
-                      className="w-full px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-gray-800/50 text-[10px] font-bold text-left"
+                      className="w-full px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-gray-800/50 text-[10px] font-bold text-left text-slate-800 dark:text-slate-200"
                     >
                       {s.name}
                     </button>
@@ -481,13 +477,11 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
             )}
           </div>
 
-          {/* City Selection */}
           <div className="space-y-1 relative">
             <label className={labelClasses}>City *</label>
             <div
               onClick={() => {
-                if (selectedState)
-                  setOpenDropdown(openDropdown === "city" ? null : "city");
+                if (selectedState) setOpenDropdown("city");
               }}
               className={cn(
                 inputClasses,
@@ -527,7 +521,7 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
                         setOpenDropdown(null);
                         setSearchQuery("");
                       }}
-                      className="w-full px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-gray-800/50 text-[10px] font-bold text-left"
+                      className="w-full px-3 py-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-gray-800/50 text-[10px] font-bold text-left text-slate-800 dark:text-slate-200"
                     >
                       {city.name}
                     </button>
@@ -537,7 +531,7 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
             )}
           </div>
 
-          {/* Address */}
+          {/* Detailed Address */}
           <div className="md:col-span-2 space-y-1">
             <label className={labelClasses}>Detailed Address *</label>
             <div className="relative">
@@ -558,7 +552,6 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
             </div>
           </div>
 
-          {/* PIN Code */}
           <div className="space-y-1">
             <label className={labelClasses}>PIN / Zip Code</label>
             <div className="relative">
@@ -583,7 +576,7 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
           </div>
         </div>
 
-        {/* Brand Authorization Section (Many-to-Many) */}
+        {/* Brand Authorization */}
         <div className="space-y-4 pt-4 border-t border-slate-50 dark:border-gray-800">
           <div className="flex items-center gap-2">
             <Tags size={16} className="text-blue-600" />
@@ -591,17 +584,15 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
               Brand Authorization *
             </label>
           </div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest -mt-2 ml-7">
+          <p className="text-[10px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest -mt-2 ml-7">
             Select brands this retailer is authorized to distribute
           </p>
 
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3">
             {isLoadingBrands ? (
-              <div className="col-span-full py-4 flex items-center justify-center gap-2">
-                <Loader2 className="animate-spin text-blue-600" size={14} />
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Fetching Brand Catalog...
-                </span>
+              <div className="col-span-full py-4 flex items-center justify-center gap-2 text-slate-400 font-black uppercase text-[10px]">
+                <Loader2 className="animate-spin text-blue-600" size={14} />{" "}
+                Fetching Catalog...
               </div>
             ) : (
               brands.map((brand: any) => {
@@ -620,7 +611,7 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
                   >
                     <div
                       className={cn(
-                        "w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 transition-colors",
+                        "w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0",
                         isSelected
                           ? "bg-white text-blue-600"
                           : "bg-white dark:bg-gray-900 text-slate-400 group-hover:text-blue-600",
@@ -633,7 +624,7 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
                         "text-[10px] font-black uppercase tracking-tight truncate",
                         isSelected
                           ? "text-white"
-                          : "text-slate-600 dark:text-slate-300",
+                          : "text-slate-800 dark:text-slate-200",
                       )}
                     >
                       {brand.name}
@@ -651,18 +642,19 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
           </div>
         </div>
 
+        {/* Footer Actions */}
         <div className="flex items-center gap-4 pt-4 border-t border-slate-50 dark:border-gray-800">
           <button
             type="submit"
             disabled={isSaving || selectedBrandIds.length === 0}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-600/20 active:scale-95 flex items-center gap-2 disabled:opacity-50"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all shadow-xl shadow-blue-600/20 active:scale-95 flex items-center gap-2 disabled:opacity-50"
           >
-            {isSaving && <Loader2 className="animate-spin" size={14} />}
-            Save retailer
+            {isSaving && <Loader2 className="animate-spin" size={14} />} Save
+            retailer
           </button>
           {selectedBrandIds.length === 0 && !isLoadingBrands && (
             <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest">
-              Please authorize at least one brand
+              Authorize at least one brand
             </p>
           )}
         </div>

@@ -27,31 +27,48 @@ export default function AddBrandModal({
   onSave,
 }: AddBrandModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  const phoneDropdownRef = useRef<HTMLDivElement>(null);
+  const countryDropdownRef = useRef<HTMLDivElement>(null);
 
   // States
-  const [selectedCountry, setSelectedCountry] = useState<CountryOption>(
-    countryOptions.find((c) => c.iso === "in") || countryOptions[0],
-  );
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedPhoneCountry, setSelectedPhoneCountry] =
+    useState<CountryOption>(
+      countryOptions.find((c) => c.iso === "in") || countryOptions[0],
+    );
 
-  // Filter countries based on Name OR Dial Code
-  const filteredCountries = useMemo(() => {
-    const query = searchQuery.toLowerCase().replace("+", ""); // Remove + for easier number searching
+  // Initialize as null to show "Select Country" placeholder
+  const [selectedOriginCountry, setSelectedOriginCountry] =
+    useState<CountryOption | null>(null);
+
+  const [isPhoneDropdownOpen, setIsPhoneDropdownOpen] = useState(false);
+  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
+
+  const [phoneSearchQuery, setPhoneSearchQuery] = useState("");
+  const [countrySearchQuery, setCountrySearchQuery] = useState("");
+
+  // Memoized Filters
+  const filteredPhoneCountries = useMemo(() => {
+    const query = phoneSearchQuery.toLowerCase().replace("+", "");
     return countryOptions.filter(
       (c) =>
         c.country.toLowerCase().includes(query) ||
         c.code.replace("+", "").includes(query),
     );
-  }, [searchQuery]);
+  }, [phoneSearchQuery]);
+
+  const filteredOriginCountries = useMemo(() => {
+    const query = countrySearchQuery.toLowerCase();
+    return countryOptions.filter((c) =>
+      c.country.toLowerCase().includes(query),
+    );
+  }, [countrySearchQuery]);
 
   useClickOutside(modalRef, onClose);
-  useClickOutside(dropdownRef, () => setIsDropdownOpen(false));
+  useClickOutside(phoneDropdownRef, () => setIsPhoneDropdownOpen(false));
+  useClickOutside(countryDropdownRef, () => setIsCountryDropdownOpen(false));
 
   if (!isOpen) return null;
 
-  // Updated label colors: gray-800 for light, gray-200 for dark
   const labelClasses =
     "text-[10px] font-black uppercase tracking-widest text-gray-800 dark:text-gray-200 mb-2 block ml-1";
 
@@ -63,11 +80,19 @@ export default function AddBrandModal({
     const formData = new FormData(e.currentTarget);
     const data = Object.fromEntries(formData.entries());
 
+    // Construct phone number
     if (data.rawPhone) {
-      data.supportPhone = `${selectedCountry.code} ${data.rawPhone}`;
+      data.supportPhone = `${selectedPhoneCountry.code} ${data.rawPhone}`;
     }
-    delete data.rawPhone;
 
+    // Set selected country name (validation check)
+    if (!selectedOriginCountry) {
+      alert("Please select a Country of Origin");
+      return;
+    }
+    data.country = selectedOriginCountry.country;
+
+    delete data.rawPhone;
     await onSave(data);
   };
 
@@ -130,25 +155,92 @@ export default function AddBrandModal({
               </div>
             </div>
 
-            {/* Country Text Input */}
-            <div className="space-y-1">
+            {/* Country of Origin (Fixed Placeholder) */}
+            <div className="space-y-1 relative" ref={countryDropdownRef}>
               <label className={labelClasses}>Country of Origin *</label>
-              <div className="relative group">
-                <Globe
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+              <div
+                onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
+                className={cn(
+                  inputClasses,
+                  "flex items-center justify-between cursor-pointer",
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  {selectedOriginCountry ? (
+                    <>
+                      <img
+                        src={`https://flagcdn.com/w40/${selectedOriginCountry.iso}.png`}
+                        alt=""
+                        className="w-5 h-3.5 object-cover rounded-sm shadow-sm"
+                      />
+                      <span>{selectedOriginCountry.country}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Globe size={16} className="text-gray-400" />
+                      <span className="text-gray-400 font-bold">
+                        Select Country
+                      </span>
+                    </>
+                  )}
+                </div>
+                <ChevronDown
                   size={16}
-                  strokeWidth={2.5}
-                />
-                <input
-                  name="country"
-                  required
-                  placeholder="e.g. Japan"
-                  className={cn(inputClasses, "pl-12")}
+                  className={cn(
+                    "text-gray-400 transition-transform",
+                    isCountryDropdownOpen && "rotate-180",
+                  )}
                 />
               </div>
+
+              {isCountryDropdownOpen && (
+                <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                  <div className="p-2 border-b border-gray-100 dark:border-gray-800">
+                    <div className="relative">
+                      <Search
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+                        size={14}
+                      />
+                      <input
+                        autoFocus
+                        placeholder="Search country..."
+                        className="w-full bg-gray-50 dark:bg-gray-800/50 border-none rounded-lg py-2 pl-9 pr-4 text-xs font-bold outline-none"
+                        value={countrySearchQuery}
+                        onChange={(e) => setCountrySearchQuery(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="max-h-60 overflow-y-auto custom-scrollbar p-1">
+                    {filteredOriginCountries.map((c) => (
+                      <button
+                        key={c.iso}
+                        type="button"
+                        onClick={() => {
+                          setSelectedOriginCountry(c);
+                          setIsCountryDropdownOpen(false);
+                          setCountrySearchQuery("");
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left text-xs font-bold",
+                          selectedOriginCountry?.iso === c.iso
+                            ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600"
+                            : "hover:bg-gray-50 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-300",
+                        )}
+                      >
+                        <img
+                          src={`https://flagcdn.com/w40/${c.iso}.png`}
+                          className="w-5 h-3.5 object-cover rounded-sm"
+                          alt=""
+                        />
+                        {c.country}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
-            {/* Website */}
+            {/* Official Website */}
             <div className="space-y-1">
               <label className={labelClasses}>Official Website</label>
               <div className="relative group">
@@ -166,22 +258,22 @@ export default function AddBrandModal({
               </div>
             </div>
 
-            {/* Phone Input with Multi-Search Dropdown */}
-            <div className="space-y-1" ref={dropdownRef}>
+            {/* Support Phone */}
+            <div className="space-y-1" ref={phoneDropdownRef}>
               <label className={labelClasses}>Support Phone</label>
               <div className="relative flex items-center group">
                 <div
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  onClick={() => setIsPhoneDropdownOpen(!isPhoneDropdownOpen)}
                   className="absolute left-1 top-1/2 -translate-y-1/2 flex items-center z-20 pl-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 py-1.5 rounded-xl transition-colors"
                 >
                   <div className="flex items-center gap-2 pr-1">
                     <img
-                      src={`https://flagcdn.com/w40/${selectedCountry.iso}.png`}
-                      alt={selectedCountry.country}
+                      src={`https://flagcdn.com/w40/${selectedPhoneCountry.iso}.png`}
+                      alt={selectedPhoneCountry.country}
                       className="w-5 h-3.5 object-cover rounded-sm shadow-sm"
                     />
                     <span className="text-sm font-bold text-gray-700 dark:text-gray-300">
-                      {selectedCountry.code}
+                      {selectedPhoneCountry.code}
                     </span>
                   </div>
                   <ChevronDown
@@ -189,14 +281,13 @@ export default function AddBrandModal({
                     strokeWidth={3}
                     className={cn(
                       "text-gray-400 ml-1 transition-transform",
-                      isDropdownOpen && "rotate-180",
+                      isPhoneDropdownOpen && "rotate-180",
                     )}
                   />
                   <div className="w-px h-5 bg-gray-200 dark:bg-gray-700 ml-3 mr-2" />
                 </div>
 
-                {/* Professional Dropdown */}
-                {isDropdownOpen && (
+                {isPhoneDropdownOpen && (
                   <div className="absolute top-[calc(100%+8px)] left-0 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl z-100 overflow-hidden animate-in slide-in-from-top-2 duration-200">
                     <div className="p-2 border-b border-gray-100 dark:border-gray-800">
                       <div className="relative">
@@ -207,51 +298,45 @@ export default function AddBrandModal({
                         <input
                           autoFocus
                           type="text"
-                          placeholder="Search country or code (e.g. 91)..."
-                          className="w-full bg-gray-50 dark:bg-gray-800/50 border-none rounded-lg py-2 pl-9 pr-4 text-xs font-bold outline-none focus:ring-2 focus:ring-blue-500/20"
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder="Search country or code..."
+                          className="w-full bg-gray-50 dark:bg-gray-800/50 border-none rounded-lg py-2 pl-9 pr-4 text-xs font-bold outline-none"
+                          value={phoneSearchQuery}
+                          onChange={(e) => setPhoneSearchQuery(e.target.value)}
                         />
                       </div>
                     </div>
                     <div className="max-h-60 overflow-y-auto custom-scrollbar p-1">
-                      {filteredCountries.length > 0 ? (
-                        filteredCountries.map((country) => (
-                          <button
-                            key={country.iso}
-                            type="button"
-                            onClick={() => {
-                              setSelectedCountry(country);
-                              setIsDropdownOpen(false);
-                              setSearchQuery("");
-                            }}
-                            className={cn(
-                              "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all text-left",
-                              selectedCountry.iso === country.iso
-                                ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600"
-                                : "hover:bg-gray-50 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-300",
-                            )}
-                          >
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={`https://flagcdn.com/w40/${country.iso}.png`}
-                                className="w-5 h-3.5 object-cover rounded-sm"
-                                alt=""
-                              />
-                              <span className="text-xs font-bold truncate max-w-35">
-                                {country.country}
-                              </span>
-                            </div>
-                            <span className="text-[10px] font-black text-gray-800 dark:text-gray-200">
-                              {country.code}
+                      {filteredPhoneCountries.map((country) => (
+                        <button
+                          key={country.iso}
+                          type="button"
+                          onClick={() => {
+                            setSelectedPhoneCountry(country);
+                            setIsPhoneDropdownOpen(false);
+                            setPhoneSearchQuery("");
+                          }}
+                          className={cn(
+                            "w-full flex items-center justify-between px-3 py-2.5 rounded-xl transition-all text-left",
+                            selectedPhoneCountry.iso === country.iso
+                              ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600"
+                              : "hover:bg-gray-50 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-300",
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={`https://flagcdn.com/w40/${country.iso}.png`}
+                              className="w-5 h-3.5 object-cover rounded-sm"
+                              alt=""
+                            />
+                            <span className="text-xs font-bold truncate max-w-35">
+                              {country.country}
                             </span>
-                          </button>
-                        ))
-                      ) : (
-                        <div className="py-8 text-center text-xs font-bold text-gray-800 dark:text-gray-200">
-                          No results found
-                        </div>
-                      )}
+                          </div>
+                          <span className="text-[10px] font-black text-gray-800 dark:text-gray-200">
+                            {country.code}
+                          </span>
+                        </button>
+                      ))}
                     </div>
                   </div>
                 )}
@@ -265,7 +350,7 @@ export default function AddBrandModal({
               </div>
             </div>
 
-            {/* Email */}
+            {/* Support Email */}
             <div className="space-y-1">
               <label className={labelClasses}>Support Email</label>
               <div className="relative group">
@@ -300,7 +385,7 @@ export default function AddBrandModal({
               </div>
             </div>
 
-            {/* Logo URL */}
+            {/* Brand Logo URL */}
             <div className="space-y-1">
               <label className={labelClasses}>Brand Logo URL</label>
               <div className="relative group">

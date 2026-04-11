@@ -1,10 +1,20 @@
 "use client";
 
-import { useRef, useState } from "react";
-import { X, Calendar, Settings, Loader2 } from "lucide-react";
+import { useRef, useState, useMemo } from "react";
+import {
+  X,
+  Calendar,
+  Settings,
+  Loader2,
+  Globe,
+  ChevronDown,
+  Search,
+} from "lucide-react";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useAdminBrands } from "@/hooks/admin/use-admin-brands";
 import { cn } from "@/lib/utils";
+// 🛡️ Import shared country data
+import { countryOptions, CountryOption } from "@/components/common/countries";
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -18,6 +28,7 @@ export default function AddProductModal({
   onSave,
 }: AddProductModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
+  const countryDropdownRef = useRef<HTMLDivElement>(null);
   const { brands } = useAdminBrands();
   const [isSaving, setIsSaving] = useState(false);
 
@@ -26,11 +37,24 @@ export default function AddProductModal({
   const [category, setCategory] = useState("");
   const [warranty, setWarranty] = useState("1");
 
+  // Country Selection States
+  const [selectedCountry, setSelectedCountry] = useState<CountryOption | null>(
+    null,
+  );
+  const [isCountryOpen, setIsCountryOpen] = useState(false);
+  const [countrySearch, setCountrySearch] = useState("");
+
+  // Search Logic for Countries
+  const filteredCountries = useMemo(() => {
+    const q = countrySearch.toLowerCase();
+    return countryOptions.filter((c) => c.country.toLowerCase().includes(q));
+  }, [countrySearch]);
+
   useClickOutside(modalRef, onClose);
+  useClickOutside(countryDropdownRef, () => setIsCountryOpen(false));
 
   if (!isOpen) return null;
 
-  // Updated to slate-800 for light and slate-200 for dark
   const labelClasses =
     "text-[10px] font-black uppercase tracking-[0.15em] text-slate-800 dark:text-slate-200 mb-2 block ml-1";
 
@@ -42,24 +66,26 @@ export default function AddProductModal({
     const formData = new FormData(e.target as HTMLFormElement);
     const data = Object.fromEntries(formData.entries());
 
-    // Override with custom user inputs if "Other" is selected
-    if (category === "Other") {
-      data.category = data.customCategory;
-    }
-    if (warranty === "Other") {
-      data.warrantyPeriod = data.customWarranty;
-    }
+    // Interactive Field Overrides
+    if (category === "Other") data.category = data.customCategory;
+    if (warranty === "Other") data.warrantyPeriod = data.customWarranty;
 
-    // Attach selected currency
     data.currency = currency;
+    data.status = "ACTIVE";
 
-    // Clean up temporary object keys before saving
+    // Attach Country Name
+    data.manufactureCountry = selectedCountry?.country || "";
+
+    // Clean up temporary keys
     delete data.customCategory;
     delete data.customWarranty;
 
     setIsSaving(true);
-    await onSave(data);
-    setIsSaving(false);
+    try {
+      await onSave(data);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -97,7 +123,7 @@ export default function AddProductModal({
               <select
                 name="brandId"
                 required
-                className={cn(inputClasses, "appearance-none")}
+                className={cn(inputClasses, "appearance-none cursor-pointer")}
               >
                 <option value="">Select brand</option>
                 {brands?.map((b: any) => (
@@ -138,7 +164,6 @@ export default function AddProductModal({
               />
             </div>
 
-            {/* Category Dropdown with "Other" condition */}
             <div className="space-y-1">
               <label className={labelClasses}>Category *</label>
               <select
@@ -146,7 +171,7 @@ export default function AddProductModal({
                 required
                 value={category}
                 onChange={(e) => setCategory(e.target.value)}
-                className={cn(inputClasses, "appearance-none")}
+                className={cn(inputClasses, "appearance-none cursor-pointer")}
               >
                 <option value="">Select Category</option>
                 <option value="Headphones / Audio">Headphones / Audio</option>
@@ -178,14 +203,13 @@ export default function AddProductModal({
               />
             </div>
 
-            {/* Warranty Dropdown with "Other" condition */}
             <div className="space-y-1">
               <label className={labelClasses}>Warranty period (years) *</label>
               <select
                 name="warrantyPeriod"
                 value={warranty}
                 onChange={(e) => setWarranty(e.target.value)}
-                className={cn(inputClasses, "appearance-none")}
+                className={cn(inputClasses, "appearance-none cursor-pointer")}
               >
                 <option value="1">1 Year</option>
                 <option value="2">2 Years</option>
@@ -196,9 +220,8 @@ export default function AddProductModal({
                 <input
                   name="customWarranty"
                   type="number"
-                  min="0"
                   step="0.5"
-                  placeholder="Enter exact years (e.g. 1.5)"
+                  placeholder="Enter exact years"
                   required
                   autoFocus
                   className={cn(inputClasses, "mt-2")}
@@ -206,7 +229,6 @@ export default function AddProductModal({
               )}
             </div>
 
-            {/* Minimum Price with Currency Selector */}
             <div className="space-y-1">
               <label className={labelClasses}>Base Price *</label>
               <div className="relative flex items-center">
@@ -221,7 +243,6 @@ export default function AddProductModal({
                 <input
                   name="priceMin"
                   type="number"
-                  min="0"
                   step="0.01"
                   placeholder="349.00"
                   required
@@ -230,7 +251,6 @@ export default function AddProductModal({
               </div>
             </div>
 
-            {/* Maximum Price with Currency Selector */}
             <div className="space-y-1">
               <label className={labelClasses}>Max Price Range</label>
               <div className="relative flex items-center">
@@ -245,7 +265,6 @@ export default function AddProductModal({
                 <input
                   name="priceMax"
                   type="number"
-                  min="0"
                   step="0.01"
                   placeholder="399.00"
                   className={cn(inputClasses, "pl-14")}
@@ -268,13 +287,84 @@ export default function AddProductModal({
               </div>
             </div>
 
-            <div className="space-y-1">
+            {/* 🌍 Country of Manufacture Selector */}
+            <div className="space-y-1 relative" ref={countryDropdownRef}>
               <label className={labelClasses}>Country of manufacture</label>
-              <input
-                name="manufactureCountry"
-                placeholder="e.g. China"
-                className={inputClasses}
-              />
+              <div
+                onClick={() => setIsCountryOpen(!isCountryOpen)}
+                className={cn(
+                  inputClasses,
+                  "flex items-center justify-between cursor-pointer",
+                )}
+              >
+                <div className="flex items-center gap-2 truncate">
+                  {selectedCountry ? (
+                    <img
+                      src={`https://flagcdn.com/w40/${selectedCountry.iso}.png`}
+                      className="w-4 h-2.5 object-cover rounded-sm"
+                      alt=""
+                    />
+                  ) : (
+                    <Globe size={14} className="text-slate-400" />
+                  )}
+                  <span className={cn(!selectedCountry && "text-slate-400")}>
+                    {selectedCountry?.country || "Select country"}
+                  </span>
+                </div>
+                <ChevronDown
+                  size={14}
+                  className={cn(
+                    "text-slate-400 transition-transform",
+                    isCountryOpen && "rotate-180",
+                  )}
+                />
+              </div>
+
+              {isCountryOpen && (
+                <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in zoom-in-95 duration-200">
+                  <div className="p-2 border-b border-slate-50 dark:border-gray-800">
+                    <div className="relative">
+                      <Search
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                        size={12}
+                      />
+                      <input
+                        autoFocus
+                        placeholder="Search country..."
+                        className="w-full bg-slate-50 dark:bg-gray-800/50 border-none rounded-lg py-2 pl-9 pr-4 text-[10px] font-bold outline-none"
+                        value={countrySearch}
+                        onChange={(e) => setCountrySearch(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="max-h-48 overflow-y-auto p-1 custom-scrollbar">
+                    {filteredCountries.map((c) => (
+                      <button
+                        key={c.iso}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCountry(c);
+                          setIsCountryOpen(false);
+                          setCountrySearch("");
+                        }}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left text-[10px] font-bold",
+                          selectedCountry?.iso === c.iso
+                            ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600"
+                            : "hover:bg-slate-50 dark:hover:bg-gray-800/50 text-slate-700 dark:text-slate-300",
+                        )}
+                      >
+                        <img
+                          src={`https://flagcdn.com/w40/${c.iso}.png`}
+                          className="w-4 h-2.5 object-cover rounded-sm"
+                          alt=""
+                        />
+                        {c.country}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1">
@@ -317,7 +407,7 @@ export default function AddProductModal({
               <textarea
                 name="description"
                 rows={2}
-                placeholder="Short description for warranty card..."
+                placeholder="Short description..."
                 className={cn(inputClasses, "resize-none")}
               />
             </div>
@@ -338,7 +428,7 @@ export default function AddProductModal({
             <button
               type="submit"
               disabled={isSaving}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-600/20 flex items-center gap-2"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-600/20 flex items-center gap-2 active:scale-95 disabled:opacity-50"
             >
               {isSaving && <Loader2 className="animate-spin" size={14} />}
               Save product
