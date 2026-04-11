@@ -51,8 +51,10 @@ export default function AddBrandModal({
 
   if (!isOpen) return null;
 
+  // Updated label colors: gray-800 for light, gray-200 for dark
   const labelClasses =
-    "text-[10px] font-black uppercase tracking-widest text-gray-600 dark:text-gray-400 mb-2 block ml-1";
+    "text-[10px] font-black uppercase tracking-widest text-gray-800 dark:text-gray-200 mb-2 block ml-1";
+
   const inputClasses =
     "w-full px-4 py-3.5 rounded-2xl bg-gray-50/50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-800 text-sm font-bold text-gray-900 dark:text-white outline-none transition-all placeholder:text-gray-400 focus:bg-white dark:focus:bg-gray-900 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/10 dark:focus:ring-blue-500/10 shadow-sm";
 
@@ -70,12 +72,12 @@ export default function AddBrandModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-gray-950/60 backdrop-blur-md animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-gray-950/60 backdrop-blur-md animate-in fade-in duration-300">
       <div
         ref={modalRef}
         className="relative w-full max-w-4xl bg-white dark:bg-gray-900 rounded-[2.5rem] shadow-2xl border border-gray-100 dark:border-gray-800 overflow-hidden animate-in zoom-in-95 duration-300"
       >
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-600 to-indigo-500" />
+        <div className="absolute top-0 left-0 right-0 h-1 bg-linear-to-r from-blue-600 to-indigo-500" />
 
         {/* Header */}
         <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-800/60 flex items-center justify-between bg-white dark:bg-gray-900 z-10 relative">
@@ -83,7 +85,7 @@ export default function AddBrandModal({
             <h2 className="text-2xl font-black tracking-tight text-gray-900 dark:text-white uppercase">
               Register Brand Identity
             </h2>
-            <p className="text-xs font-bold text-gray-600 dark:text-gray-400 mt-1">
+            <p className="text-xs font-bold text-gray-800 dark:text-gray-200 mt-1">
               Initialize a new manufacturer in the blockchain catalog.
             </p>
           </div>
@@ -195,7 +197,7 @@ export default function AddBrandModal({
 
                 {/* Professional Dropdown */}
                 {isDropdownOpen && (
-                  <div className="absolute top-[calc(100%+8px)] left-0 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl z-[100] overflow-hidden animate-in slide-in-from-top-2 duration-200">
+                  <div className="absolute top-[calc(100%+8px)] left-0 w-72 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl z-100 overflow-hidden animate-in slide-in-from-top-2 duration-200">
                     <div className="p-2 border-b border-gray-100 dark:border-gray-800">
                       <div className="relative">
                         <Search
@@ -236,17 +238,17 @@ export default function AddBrandModal({
                                 className="w-5 h-3.5 object-cover rounded-sm"
                                 alt=""
                               />
-                              <span className="text-xs font-bold truncate max-w-[140px]">
+                              <span className="text-xs font-bold truncate max-w-35">
                                 {country.country}
                               </span>
                             </div>
-                            <span className="text-[10px] font-black text-gray-600 dark:text-gray-500">
+                            <span className="text-[10px] font-black text-gray-800 dark:text-gray-200">
                               {country.code}
                             </span>
                           </button>
                         ))
                       ) : (
-                        <div className="py-8 text-center text-xs font-bold text-gray-600">
+                        <div className="py-8 text-center text-xs font-bold text-gray-800 dark:text-gray-200">
                           No results found
                         </div>
                       )}
@@ -334,7 +336,7 @@ export default function AddBrandModal({
           <button
             type="button"
             onClick={onClose}
-            className="px-6 py-3.5 text-[11px] font-black text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-xl"
+            className="px-6 py-3.5 text-[11px] font-black text-gray-800 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white rounded-xl"
           >
             Cancel
           </button>

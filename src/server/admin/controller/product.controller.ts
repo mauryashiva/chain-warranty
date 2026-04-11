@@ -30,13 +30,15 @@ export const ProductController = {
       );
     }
 
-    // 2. Check for SKU uniqueness
+    // 2. Check for SKU uniqueness (Case-insensitive check)
     if (data.sku) {
       const existingSku = await prisma.product.findUnique({
-        where: { sku: data.sku },
+        where: { sku: data.sku.toUpperCase() },
       });
       if (existingSku) {
-        throw new Error(`SKU ${data.sku} already exists in the catalog.`);
+        throw new Error(
+          `SKU ${data.sku.toUpperCase()} already exists in the catalog.`,
+        );
       }
     }
 
@@ -45,26 +47,25 @@ export const ProductController = {
       data: {
         name: data.name,
         modelNumber: data.modelNumber,
-        sku: data.sku.toUpperCase(), // Ensure SKU is always uppercase in DB
+        sku: data.sku.toUpperCase(), // Standardize storage
         category: data.category,
         subCategory: data.subCategory,
 
-        companyId: data.companyId || "default-company-id", // Fallback for multi-tenant
+        // Relational Link (Company removed as per new architecture)
         brandId: data.brandId,
+
         description: data.description,
 
-        // Number and string parsing from UI
+        // Data Type Parsing
         warrantyPeriod: data.warrantyPeriod?.toString(),
         priceMin: data.priceMin ? parseFloat(data.priceMin) : null,
         priceMax: data.priceMax ? parseFloat(data.priceMax) : null,
-
-        // 🔥 THIS IS THE CRUCIAL LINE WE ADDED FOR YOUR UI:
         currency: data.currency || "USD",
 
-        // Dates
+        // Date Handling
         launchDate: data.launchDate ? new Date(data.launchDate) : null,
 
-        // Metadata
+        // Specification Metadata
         manufactureCountry: data.manufactureCountry,
         hsnCode: data.hsnCode,
         variants: data.variants,

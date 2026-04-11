@@ -85,7 +85,7 @@ model Company {
   website   String?
   createdAt DateTime  @default(now())
   isDeleted Boolean   @default(false)
-  products  Product[]
+  brands    Brand[]
 }
 
 model Brand {
@@ -102,6 +102,8 @@ model Brand {
   taxId        String?
   logoUrl      String?
   description  String? @db.Text
+  companyId    String?
+  company      Company? @relation(fields: [companyId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @default(now()) @updatedAt
@@ -112,6 +114,7 @@ model Brand {
 model Product {
   id          String  @id @default(cuid())
   name        String
+  modelNumber        String    // 👈 Make sure this line exists!
   description String? @db.Text
   category    String?
   subCategory String?
@@ -132,17 +135,14 @@ model Product {
   termsUrl           String?
   status             String    @default("Active")
 
-  companyId String
   brandId   String? // Link to the Brand model
   createdAt DateTime @default(now())
   isDeleted Boolean  @default(false)
 
-  company    Company    @relation(fields: [companyId], references: [id])
   brand      Brand?     @relation(fields: [brandId], references: [id])
   warranties Warranty[]
   serials    Serial[]
 
-  @@index([companyId])
   @@index([brandId])
 }
 
@@ -163,6 +163,7 @@ enum SerialStatus {
   UNREGISTERED
   REGISTERED
   FLAGGED
+  blocked
 }
 
 //////////////////////////////////////////////////////

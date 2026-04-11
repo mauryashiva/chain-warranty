@@ -1,14 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import {
-  X,
-  Calendar,
-  Settings,
-  Loader2,
-  DollarSign,
-  IndianRupee,
-} from "lucide-react";
+import { X, Calendar, Settings, Loader2 } from "lucide-react";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useAdminBrands } from "@/hooks/admin/use-admin-brands";
 import { cn } from "@/lib/utils";
@@ -37,8 +30,10 @@ export default function AddProductModal({
 
   if (!isOpen) return null;
 
+  // Updated to slate-800 for light and slate-200 for dark
   const labelClasses =
-    "text-[10px] font-black uppercase tracking-[0.15em] text-slate-400 mb-2 block ml-1";
+    "text-[10px] font-black uppercase tracking-[0.15em] text-slate-800 dark:text-slate-200 mb-2 block ml-1";
+
   const inputClasses =
     "w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-gray-800 border-none text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 ring-blue-600/20 transition-all placeholder:text-slate-400";
 
@@ -79,7 +74,7 @@ export default function AddProductModal({
             <h2 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">
               Add New Product Model
             </h2>
-            <p className="text-[11px] font-bold text-slate-600 dark:text-gray-400">
+            <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200">
               Initialize a new asset specification in the global registry.
             </p>
           </div>
@@ -351,7 +346,7 @@ export default function AddProductModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-4 text-xs font-black text-slate-500 hover:text-slate-900 transition-colors uppercase tracking-widest"
+              className="px-6 py-4 text-xs font-black text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors uppercase tracking-widest"
             >
               Cancel
             </button>
