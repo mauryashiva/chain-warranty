@@ -1,13 +1,36 @@
 @import "tailwindcss";
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* smooth UI */
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #0f172a; /* Slate 900 */
+    --muted: #64748b; /* Slate 500 */
+    --border: #e2e8f0; /* Slate 200 */
+    --card: #f8fafc; /* Slate 50 */
+  }
+
+  .dark {
+    --background: #020617; /* Slate 950 */
+    --foreground: #f8fafc; /* Slate 50 */
+    --muted: #94a3b8; /* Slate 400 */
+    --border: #1e293b; /* Slate 800 */
+    --card: #0f172a; /* Slate 900 */
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
+  }
+}
+
+/* Smooth UI */
 html,
 body {
   height: 100%;
-}
-
-/* fix background */
-body {
-  @apply bg-white text-black dark:bg-black dark:text-white;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }

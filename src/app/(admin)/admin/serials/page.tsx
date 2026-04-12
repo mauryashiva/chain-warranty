@@ -10,7 +10,7 @@ import {
   ShieldAlert,
   BarChart3,
   Ban,
-  Settings2, // More premium icon for Edit
+  Settings2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import BulkUploadSerialsModal from "@/components/admin/serial/BulkUploadSerials";
@@ -34,10 +34,9 @@ export default function AdminSerialsPage() {
       blocked: "0",
     },
     validateSerial,
-    updateSerial, // 🟢 Connect to hook
+    updateSerial,
   } = useAdminSerials();
 
-  // Color constants for high-end feel
   const labelClasses =
     "text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 mb-1";
 
@@ -56,7 +55,7 @@ export default function AdminSerialsPage() {
   };
 
   return (
-    <div className="space-y-10 min-h-screen bg-white dark:bg-gray-900 pb-24 px-6 md:px-10 pt-8">
+    <div className="space-y-10 min-h-screen bg-white dark:bg-gray-900 pb-24 px-6 md:px-10 pt-4">
       {/* Modals */}
       <BulkUploadSerialsModal
         isOpen={isBulkOpen}
@@ -72,26 +71,26 @@ export default function AdminSerialsPage() {
         />
       )}
 
-      {/* Header Area */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-100 dark:border-gray-800 pb-8">
-        <div>
-          <h1 className="text-5xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">
-            Serial numbers
-          </h1>
-          <p className="text-xs font-bold text-slate-800 dark:text-slate-200 mt-2 uppercase tracking-[0.2em] opacity-80">
+      {/* Header Area - Left/Upper Shifted */}
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-6 border-b border-slate-100 dark:border-gray-800 pb-6">
+        <div className="text-left">
+          <h3 className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white uppercase leading-none">
+            Serial Numbers
+          </h3>
+          <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-2 uppercase tracking-[0.2em]">
             Validate and manage authorised serial numbers per product
           </p>
         </div>
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsBulkOpen(true)}
-            className="flex items-center gap-2.5 bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 text-slate-900 dark:text-white px-7 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all hover:bg-white dark:hover:bg-gray-700 hover:shadow-sm active:scale-[0.98]"
+            className="flex items-center gap-2.5 bg-slate-50 dark:bg-gray-800 border border-slate-200 dark:border-gray-700 text-slate-900 dark:text-white px-6 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all hover:bg-white dark:hover:bg-gray-700 active:scale-[0.98]"
           >
-            <FileSpreadsheet size={15} strokeWidth={2.5} />
+            <FileSpreadsheet size={14} strokeWidth={2.5} />
             Bulk upload CSV
           </button>
-          <button className="flex items-center gap-2.5 bg-blue-600 text-white px-7 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-2xl shadow-blue-600/30 transition-all hover:bg-blue-700 active:scale-[0.98]">
-            <Plus size={15} strokeWidth={4} />
+          <button className="flex items-center gap-2.5 bg-blue-600 text-white px-6 py-3.5 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-2xl shadow-blue-600/30 transition-all hover:bg-blue-700 active:scale-[0.98]">
+            <Plus size={14} strokeWidth={4} />
             Add single
           </button>
         </div>
@@ -102,42 +101,38 @@ export default function AdminSerialsPage() {
         {[
           {
             label: "Total serials",
-            value: stats?.total || "0",
+            value: stats?.total,
             icon: <BarChart3 size={14} />,
           },
           {
             label: "Registered",
-            value: stats?.registered || "0",
+            value: stats?.registered,
             icon: <CheckCircle2 size={14} />,
           },
           {
             label: "Unregistered",
-            value: stats?.unregistered || "0",
+            value: stats?.unregistered,
             icon: <Search size={14} />,
           },
           {
             label: "Flagged",
-            value: stats?.flagged || "0",
+            value: stats?.flagged,
             icon: <ShieldAlert size={14} />,
           },
-          {
-            label: "Blocked",
-            value: stats?.blocked || "0",
-            icon: <Ban size={14} />,
-          },
+          { label: "Blocked", value: stats?.blocked, icon: <Ban size={14} /> },
         ].map((s) => (
           <div
             key={s.label}
-            className="bg-slate-50/50 dark:bg-gray-800/30 border border-slate-100 dark:border-gray-800 p-6 rounded-4xl"
+            className="bg-slate-50/50 dark:bg-gray-800/30 border border-slate-100 dark:border-gray-800 p-6 rounded-3xl"
           >
             <div className="flex items-center gap-2 mb-3 opacity-60">
               <span className="text-slate-900 dark:text-white">{s.icon}</span>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
+              <p className="text-[9px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
                 {s.label}
               </p>
             </div>
-            <p className="text-3xl font-black text-slate-900 dark:text-white tabular-nums">
-              {s.value}
+            <p className="text-2xl font-black text-slate-900 dark:text-white tabular-nums">
+              {s.value || "0"}
             </p>
           </div>
         ))}
@@ -170,29 +165,26 @@ export default function AdminSerialsPage() {
       {/* Serials Table Area */}
       <div className="bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left border-collapse min-w-250">
             <thead>
               <tr className="bg-slate-50/50 dark:bg-gray-800/50">
                 <th className="px-8 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
                   Serial Number
                 </th>
                 <th className="px-4 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
-                  Product
+                  Product Details
                 </th>
                 <th className="px-4 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
                   Batch
                 </th>
                 <th className="px-4 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
-                  Mfg Date
-                </th>
-                <th className="px-4 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
-                  Retailer
+                  Retailer Info
                 </th>
                 <th className="px-4 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
                   Status
                 </th>
                 <th className="px-4 py-6 text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 text-center">
-                  Registered By
+                  Registry Identity
                 </th>
                 <th className="px-8 py-6 text-right text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200">
                   Actions
@@ -202,7 +194,7 @@ export default function AdminSerialsPage() {
             <tbody className="divide-y divide-slate-50 dark:divide-gray-800">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="py-24 text-center">
+                  <td colSpan={7} className="py-24 text-center">
                     <Loader2
                       className="animate-spin mx-auto text-blue-600"
                       size={30}
@@ -212,7 +204,7 @@ export default function AdminSerialsPage() {
                 </tr>
               ) : serials.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-24 text-center">
+                  <td colSpan={7} className="py-24 text-center">
                     <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">
                       No serials found in registry
                     </p>
@@ -224,32 +216,38 @@ export default function AdminSerialsPage() {
                     key={serial.id}
                     className="hover:bg-slate-50/80 dark:hover:bg-gray-800/40 transition-colors group"
                   >
-                    <td className="px-8 py-6 font-mono text-[13px] font-bold text-slate-900 dark:text-white uppercase tracking-tighter">
-                      {serial.serialNumber}
+                    <td className="px-8 py-7">
+                      <div className="flex flex-col">
+                        <span className="font-mono text-[13px] font-black text-slate-900 dark:text-white uppercase tracking-tighter">
+                          {serial.serialNumber}
+                        </span>
+                        <span className="text-[9px] font-bold text-slate-400 uppercase mt-0.5">
+                          Mfg:{" "}
+                          {serial.manufactureDate
+                            ? new Date(
+                                serial.manufactureDate,
+                              ).toLocaleDateString()
+                            : "N/A"}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-4 py-6">
-                      <p className="text-[11px] font-black uppercase text-slate-900 dark:text-white">
+                    <td className="px-4 py-7">
+                      <p className="text-[11px] font-black uppercase text-slate-900 dark:text-white truncate max-w-37.5">
                         {serial.product?.name}
                       </p>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                      <p className="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest mt-0.5">
                         {serial.product?.brand?.name}
                       </p>
                     </td>
-                    <td className="px-4 py-6 text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase">
+                    <td className="px-4 py-7 text-[11px] font-black text-slate-800 dark:text-slate-200 uppercase">
                       {serial.batchId || "—"}
                     </td>
-                    <td className="px-4 py-6 text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase">
-                      {serial.manufactureDate
-                        ? new Date(serial.manufactureDate).toLocaleDateString(
-                            "en-US",
-                            { month: "short", year: "numeric" },
-                          )
-                        : "—"}
+                    <td className="px-4 py-7">
+                      <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase">
+                        {serial.retailer?.name || "Warehouse"}
+                      </p>
                     </td>
-                    <td className="px-4 py-6 text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase">
-                      {serial.retailer?.name || "Unassigned"}
-                    </td>
-                    <td className="px-4 py-6">
+                    <td className="px-4 py-7">
                       <span
                         className={cn(
                           "text-[9px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg border",
@@ -265,22 +263,21 @@ export default function AdminSerialsPage() {
                         {serial.status}
                       </span>
                     </td>
-                    <td className="px-4 py-6 text-center font-mono text-[10px] text-slate-500 dark:text-slate-400">
+                    <td className="px-4 py-7 text-center font-mono text-[10px] text-slate-500 dark:text-slate-400">
                       {serial.registeredBy
                         ? `${serial.registeredBy.slice(0, 6)}...${serial.registeredBy.slice(-4)}`
                         : "—"}
                     </td>
-                    <td className="px-8 py-6 text-right">
-                      {/* Premium Edit Button */}
+                    <td className="px-8 py-7 text-right">
                       <button
                         onClick={() => handleEditClick(serial)}
-                        className="group/btn flex items-center gap-2 ml-auto bg-slate-100 dark:bg-gray-800 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all active:scale-95"
+                        className="group/btn inline-flex items-center gap-2 bg-slate-100 dark:bg-gray-800 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all whitespace-nowrap"
                       >
                         <Settings2
-                          size={14}
+                          size={13}
                           className="group-hover/btn:rotate-90 transition-transform duration-500"
                         />
-                        <span>Edit</span>
+                        Modify Registry
                       </button>
                     </td>
                   </tr>

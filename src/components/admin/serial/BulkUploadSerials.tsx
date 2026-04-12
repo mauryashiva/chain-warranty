@@ -5,12 +5,8 @@ import {
   Upload,
   Info,
   X,
-  ChevronDown,
   Calendar,
-  Package,
-  Layers,
   Truck,
-  Store,
   FileText,
   Loader2,
 } from "lucide-react";
@@ -20,9 +16,9 @@ import { useAdminRetailers } from "@/hooks/admin/use-admin-retailers";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { cn } from "@/lib/utils";
 import Papa from "papaparse";
-// 🏷️ Import premium Select components
 import BrandSelect from "@/components/common/Form/BrandSelect";
 import ProductSelect from "@/components/common/Form/ProductSelect";
+import RetailerSelect from "@/components/common/Form/RetailerSelect";
 
 interface BulkUploadSerialsModalProps {
   isOpen: boolean;
@@ -49,9 +45,7 @@ export default function BulkUploadSerialsModal({
   const [entryMode, setEntryMode] = useState<"file" | "manual">("file");
   const [isUploading, setIsUploading] = useState(false);
 
-  const { products } = useAdminProducts();
   const { uploadSerials } = useAdminSerials();
-  const { retailers } = useAdminRetailers();
 
   useClickOutside(modalRef, onClose);
 
@@ -101,7 +95,6 @@ export default function BulkUploadSerialsModal({
       });
 
       onClose();
-      // Reset form
       setFile(null);
       setManualSerials("");
       setSelectedBrand("");
@@ -151,15 +144,15 @@ export default function BulkUploadSerialsModal({
     (file !== null || manualSerials.trim().length > 0);
 
   return (
-    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-200">
       <div
         ref={modalRef}
-        className="relative w-full max-w-5xl bg-white dark:bg-gray-900 rounded-[3rem] shadow-2xl border border-slate-100 dark:border-gray-800 overflow-hidden animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-5xl bg-white dark:bg-gray-900 rounded-[3rem] shadow-2xl border border-slate-100 dark:border-gray-800 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200"
       >
-        <div className="absolute top-0 left-0 right-0 h-1.5 bg-linear-to-r from-blue-600 via-indigo-500 to-blue-600" />
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600 z-50" />
 
-        {/* Header */}
-        <div className="px-10 py-8 border-b border-slate-50 dark:border-gray-800/60 flex items-center justify-between">
+        {/* Header - Sticky */}
+        <div className="px-10 py-8 border-b border-slate-50 dark:border-gray-800/60 flex items-center justify-between shrink-0 bg-white dark:bg-gray-900 z-40">
           <div>
             <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
               Bulk Upload Serial Numbers
@@ -170,30 +163,29 @@ export default function BulkUploadSerialsModal({
           </div>
           <button
             onClick={onClose}
-            className="p-3 bg-slate-50 hover:bg-slate-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-full text-slate-500 transition-all"
+            className="p-3 bg-slate-50 hover:bg-slate-100 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-full text-slate-500 transition-all active:scale-90"
           >
             <X size={20} strokeWidth={3} />
           </button>
         </div>
 
-        {/* Form Body */}
-        <div className="p-10 space-y-8 max-h-[75vh] overflow-y-auto custom-scrollbar">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
+        {/* Form Body - Scrollable */}
+        <div className="p-10 space-y-10 overflow-y-auto custom-scrollbar flex-1">
+          {/* Metadata Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-8">
             <div className="space-y-1">
               <label className={labelClasses}>Brand *</label>
-              {/* 🏷️ Using premium searchable BrandSelect */}
               <BrandSelect
                 value={selectedBrand}
                 onChange={(id) => {
                   setSelectedBrand(id);
-                  setSelectedProduct(""); // Reset product when brand changes
+                  setSelectedProduct("");
                 }}
               />
             </div>
 
             <div className="space-y-1">
               <label className={labelClasses}>Product / SKU *</label>
-              {/* 🏷️ Using premium searchable ProductSelect */}
               <ProductSelect
                 value={selectedProduct}
                 onChange={setSelectedProduct}
@@ -216,14 +208,17 @@ export default function BulkUploadSerialsModal({
               <label className={labelClasses}>Manufacturing Date</label>
               <div className="relative group">
                 <Calendar
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors pointer-events-none"
                   size={16}
                 />
                 <input
                   type="date"
                   value={mfgDate}
                   onChange={(e) => setMfgDate(e.target.value)}
-                  className={cn(inputClasses, "pl-12 dark:color-scheme-dark")}
+                  className={cn(
+                    inputClasses,
+                    "pl-12 [color-scheme:light] dark:[color-scheme:dark]",
+                  )}
                 />
               </div>
             </div>
@@ -232,115 +227,126 @@ export default function BulkUploadSerialsModal({
               <label className={labelClasses}>Dispatch Date</label>
               <div className="relative group">
                 <Truck
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors pointer-events-none"
                   size={16}
                 />
                 <input
                   type="date"
                   value={dispatchDate}
                   onChange={(e) => setDispatchDate(e.target.value)}
-                  className={cn(inputClasses, "pl-12 dark:color-scheme-dark")}
+                  className={cn(
+                    inputClasses,
+                    "pl-12 [color-scheme:light] dark:[color-scheme:dark]",
+                  )}
                 />
               </div>
             </div>
 
             <div className="space-y-1">
               <label className={labelClasses}>Retailer Assigned</label>
-              <div className="relative group">
-                <Store
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors"
-                  size={16}
-                />
-                <select
-                  className={cn(inputClasses, "pl-12 cursor-pointer")}
-                  value={retailerId}
-                  onChange={(e) => setRetailerId(e.target.value)}
-                >
-                  <option value="">All retailers</option>
-                  {retailers?.map((r: any) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                  size={16}
-                />
-              </div>
+              <RetailerSelect
+                value={retailerId}
+                onChange={setRetailerId}
+                placeholder="Select partner..."
+              />
             </div>
           </div>
 
-          <div className="flex gap-4 border-b border-slate-50 dark:border-gray-800 pb-2">
-            {["file", "manual"].map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setEntryMode(mode as any)}
-                className={cn(
-                  "text-[10px] font-black uppercase tracking-widest pb-2 px-2 transition-all",
-                  entryMode === mode
-                    ? "text-blue-600 border-b-2 border-blue-600"
-                    : "text-slate-400",
-                )}
-              >
-                {mode === "file" ? "CSV Upload" : "Manual Entry"}
-              </button>
-            ))}
-          </div>
+          {/* Entry Mode Selector */}
+          <div className="space-y-6">
+            <div className="flex gap-8 border-b border-slate-100 dark:border-gray-800 pb-0.5">
+              {["file", "manual"].map((mode) => (
+                <button
+                  key={mode}
+                  onClick={() => setEntryMode(mode as any)}
+                  className={cn(
+                    "text-[10px] font-black uppercase tracking-[0.2em] pb-4 px-2 transition-all relative",
+                    entryMode === mode
+                      ? "text-blue-600"
+                      : "text-slate-400 hover:text-slate-600",
+                  )}
+                >
+                  {mode === "file" ? "CSV Bulk Upload" : "Manual Entry"}
+                  {entryMode === mode && (
+                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-blue-600 rounded-t-full animate-in slide-in-from-bottom-1" />
+                  )}
+                </button>
+              ))}
+            </div>
 
-          {entryMode === "file" ? (
-            <div
-              onClick={() => fileInputRef.current?.click()}
-              onDragOver={handleDragOver}
-              onDrop={handleDrop}
-              className={cn(
-                "group border-2 border-dashed rounded-[2.5rem] p-12 flex flex-col items-center justify-center gap-4 transition-all cursor-pointer",
-                isDragging
-                  ? "border-blue-600 bg-blue-50 dark:bg-blue-900/20"
-                  : "border-slate-200 dark:border-gray-800 bg-slate-50/30 dark:bg-gray-800/20 hover:border-blue-500",
-              )}
-            >
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                accept=".csv"
-                className="hidden"
-              />
-              {file ? (
-                <div className="text-center">
-                  <FileText
-                    className="mx-auto text-emerald-500 mb-2"
-                    size={32}
+            {/* Upload Area */}
+            <div className="animate-in fade-in slide-in-from-top-2 duration-300">
+              {entryMode === "file" ? (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  className={cn(
+                    "group border-2 border-dashed rounded-[2.5rem] p-16 flex flex-col items-center justify-center gap-4 transition-all cursor-pointer",
+                    isDragging
+                      ? "border-blue-600 bg-blue-50 dark:bg-blue-900/10 scale-[0.99]"
+                      : "border-slate-200 dark:border-gray-800 bg-slate-50/50 dark:bg-gray-800/20 hover:border-blue-500 hover:bg-slate-50 dark:hover:bg-gray-800/40",
+                  )}
+                >
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept=".csv"
+                    className="hidden"
                   />
-                  <p className="text-sm font-black uppercase">{file.name}</p>
+                  {file ? (
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                        <FileText className="text-emerald-500" size={32} />
+                      </div>
+                      <p className="text-sm font-black uppercase tracking-tight text-slate-900 dark:text-white">
+                        {file.name}
+                      </p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">
+                        {(file.size / 1024).toFixed(2)} KB • Ready to parse
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+                        <Upload className="text-blue-600" size={32} />
+                      </div>
+                      <p className="text-sm font-black uppercase tracking-tight text-slate-900 dark:text-white">
+                        Drop CSV or Click to Upload
+                      </p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">
+                        Maximum file size: 10MB
+                      </p>
+                    </div>
+                  )}
                 </div>
               ) : (
-                <div className="text-center">
-                  <Upload className="mx-auto text-blue-600 mb-2" size={32} />
-                  <p className="text-sm font-black uppercase">
-                    Drop CSV or Click to Upload
-                  </p>
+                <div className="relative">
+                  <textarea
+                    value={manualSerials}
+                    onChange={(e) => setManualSerials(e.target.value)}
+                    placeholder="SN-2024-001&#10;SN-2024-002"
+                    className={cn(
+                      inputClasses,
+                      "min-h-48 py-6 px-6 resize-none font-mono text-xs leading-relaxed",
+                    )}
+                  />
+                  <div className="absolute top-4 right-4 text-[9px] font-black text-slate-400 uppercase">
+                    One per line
+                  </div>
                 </div>
               )}
             </div>
-          ) : (
-            <textarea
-              value={manualSerials}
-              onChange={(e) => setManualSerials(e.target.value)}
-              placeholder="SN-2024-001&#10;SN-2024-002"
-              className={cn(
-                inputClasses,
-                "min-h-40 py-4 resize-none font-mono text-xs",
-              )}
-            />
-          )}
+          </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-10 py-6 border-t border-slate-50 dark:border-gray-800/60 flex items-center justify-between bg-slate-50/30 dark:bg-gray-950/20">
+        {/* Footer - Sticky */}
+        <div className="px-10 py-6 border-t border-slate-50 dark:border-gray-800/60 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-gray-950/20 z-40">
           <div className="flex items-center gap-3">
-            <Info size={14} className="text-blue-600" strokeWidth={3} />
+            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
+              <Info size={14} className="text-blue-600" strokeWidth={3} />
+            </div>
             <p className={helperTextClasses}>
               Registry requires unique serial numbers per SKU.
             </p>
@@ -348,7 +354,7 @@ export default function BulkUploadSerialsModal({
           <div className="flex gap-4">
             <button
               onClick={onClose}
-              className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 transition-colors"
+              className="px-8 py-4 text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors"
             >
               Cancel
             </button>
@@ -356,14 +362,17 @@ export default function BulkUploadSerialsModal({
               onClick={handleSubmit}
               disabled={!isFormValid || isUploading}
               className={cn(
-                "px-10 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all",
+                "px-10 py-4 rounded-2xl font-black text-[10px] uppercase tracking-[0.2em] transition-all flex items-center gap-3",
                 isFormValid && !isUploading
-                  ? "bg-blue-600 text-white shadow-xl active:scale-95"
-                  : "bg-slate-200 text-slate-400 cursor-not-allowed",
+                  ? "bg-blue-600 text-white shadow-xl shadow-blue-600/20 hover:bg-blue-700 active:scale-95"
+                  : "bg-slate-200 dark:bg-gray-800 text-slate-400 dark:text-slate-600 cursor-not-allowed",
               )}
             >
               {isUploading ? (
-                <Loader2 className="animate-spin" size={16} />
+                <>
+                  <Loader2 className="animate-spin" size={14} />
+                  Processing...
+                </>
               ) : (
                 "Upload & Validate"
               )}

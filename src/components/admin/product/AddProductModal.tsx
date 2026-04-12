@@ -12,9 +12,7 @@ import {
 } from "lucide-react";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { cn } from "@/lib/utils";
-// 🛡️ Import shared country data
 import { countryOptions, CountryOption } from "@/components/common/countries";
-// 🏷️ Import the new premium BrandSelect
 import BrandSelect from "@/components/common/Form/BrandSelect";
 
 interface AddProductModalProps {
@@ -32,20 +30,17 @@ export default function AddProductModal({
   const countryDropdownRef = useRef<HTMLDivElement>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // States for interactive fields
+  // States
   const [selectedBrandId, setSelectedBrandId] = useState("");
   const [currency, setCurrency] = useState("USD");
   const [category, setCategory] = useState("");
   const [warranty, setWarranty] = useState("1");
-
-  // Country Selection States
   const [selectedCountry, setSelectedCountry] = useState<CountryOption | null>(
     null,
   );
   const [isCountryOpen, setIsCountryOpen] = useState(false);
   const [countrySearch, setCountrySearch] = useState("");
 
-  // Search Logic for Countries
   const filteredCountries = useMemo(() => {
     const q = countrySearch.toLowerCase();
     return countryOptions.filter((c) => c.country.toLowerCase().includes(q));
@@ -58,7 +53,6 @@ export default function AddProductModal({
 
   const labelClasses =
     "text-[10px] font-black uppercase tracking-[0.15em] text-slate-800 dark:text-slate-200 mb-2 block ml-1";
-
   const inputClasses =
     "w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-gray-800 border-none text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 ring-blue-600/20 transition-all placeholder:text-slate-400";
 
@@ -67,24 +61,19 @@ export default function AddProductModal({
     const formData = new FormData(e.target as HTMLFormElement);
     const data = Object.fromEntries(formData.entries());
 
-    // Validation for the custom BrandSelect
     if (!selectedBrandId) {
       alert("Please select a brand");
       return;
     }
 
-    // Interactive Field Overrides
     if (category === "Other") data.category = data.customCategory;
     if (warranty === "Other") data.warrantyPeriod = data.customWarranty;
 
     data.brandId = selectedBrandId;
     data.currency = currency;
     data.status = "ACTIVE";
-
-    // Attach Country Name
     data.manufactureCountry = selectedCountry?.country || "";
 
-    // Clean up temporary keys
     delete data.customCategory;
     delete data.customWarranty;
 
@@ -108,7 +97,7 @@ export default function AddProductModal({
             <h2 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">
               Add New Product Model
             </h2>
-            <p className="text-[11px] font-bold text-slate-800 dark:text-slate-200">
+            <p className="text-[11px] font-bold text-slate-500 mt-1">
               Initialize a new asset specification in the global registry.
             </p>
           </div>
@@ -123,12 +112,12 @@ export default function AddProductModal({
         {/* Form Body */}
         <form
           onSubmit={handleSubmit}
-          className="p-8 overflow-y-auto max-h-[75vh]"
+          className="p-10 space-y-8 overflow-y-auto max-h-[75vh] custom-scrollbar"
         >
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-8">
+            {/* Row 1 */}
             <div className="space-y-1">
               <label className={labelClasses}>Brand *</label>
-              {/* 🏷️ Replaced select with premium BrandSelect */}
               <BrandSelect
                 value={selectedBrandId}
                 onChange={setSelectedBrandId}
@@ -155,6 +144,7 @@ export default function AddProductModal({
               />
             </div>
 
+            {/* Row 2 */}
             <div className="space-y-1">
               <label className={labelClasses}>SKU *</label>
               <input
@@ -178,18 +168,13 @@ export default function AddProductModal({
                 <option value="Headphones / Audio">Headphones / Audio</option>
                 <option value="Smartphone">Smartphone</option>
                 <option value="Laptop">Laptop</option>
-                <option value="Smart TV">Smart TV</option>
-                <option value="Tablet">Tablet</option>
-                <option value="Camera">Camera</option>
-                <option value="Wearable">Wearable</option>
                 <option value="Other">Other</option>
               </select>
               {category === "Other" && (
                 <input
                   name="customCategory"
-                  placeholder="Type custom category..."
+                  placeholder="Type category..."
                   required
-                  autoFocus
                   className={cn(inputClasses, "mt-2")}
                 />
               )}
@@ -204,6 +189,7 @@ export default function AddProductModal({
               />
             </div>
 
+            {/* Row 3 */}
             <div className="space-y-1">
               <label className={labelClasses}>Warranty period (years) *</label>
               <select
@@ -214,20 +200,8 @@ export default function AddProductModal({
               >
                 <option value="1">1 Year</option>
                 <option value="2">2 Years</option>
-                <option value="3">3 Years</option>
                 <option value="Other">Other</option>
               </select>
-              {warranty === "Other" && (
-                <input
-                  name="customWarranty"
-                  type="number"
-                  step="0.5"
-                  placeholder="Enter exact years"
-                  required
-                  autoFocus
-                  className={cn(inputClasses, "mt-2")}
-                />
-              )}
             </div>
 
             <div className="space-y-1">
@@ -236,7 +210,7 @@ export default function AddProductModal({
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
-                  className="absolute left-3 bg-transparent text-xs font-black text-slate-500 outline-none cursor-pointer appearance-none z-10"
+                  className="absolute left-3 bg-transparent text-[10px] font-black text-slate-500 outline-none appearance-none z-10"
                 >
                   <option value="USD">USD</option>
                   <option value="INR">INR</option>
@@ -244,7 +218,6 @@ export default function AddProductModal({
                 <input
                   name="priceMin"
                   type="number"
-                  step="0.01"
                   placeholder="349.00"
                   required
                   className={cn(inputClasses, "pl-14")}
@@ -258,7 +231,7 @@ export default function AddProductModal({
                 <select
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
-                  className="absolute left-3 bg-transparent text-xs font-black text-slate-500 outline-none cursor-pointer appearance-none z-10"
+                  className="absolute left-3 bg-transparent text-[10px] font-black text-slate-500 outline-none appearance-none z-10"
                 >
                   <option value="USD">USD</option>
                   <option value="INR">INR</option>
@@ -266,13 +239,13 @@ export default function AddProductModal({
                 <input
                   name="priceMax"
                   type="number"
-                  step="0.01"
                   placeholder="399.00"
                   className={cn(inputClasses, "pl-14")}
                 />
               </div>
             </div>
 
+            {/* Row 4 */}
             <div className="space-y-1">
               <label className={labelClasses}>Launch date</label>
               <div className="relative">
@@ -288,7 +261,6 @@ export default function AddProductModal({
               </div>
             </div>
 
-            {/* 🌍 Country of Manufacture Selector */}
             <div className="space-y-1 relative" ref={countryDropdownRef}>
               <label className={labelClasses}>Country of manufacture</label>
               <div
@@ -331,7 +303,7 @@ export default function AddProductModal({
                       />
                       <input
                         autoFocus
-                        placeholder="Search country..."
+                        placeholder="Search..."
                         className="w-full bg-slate-50 dark:bg-gray-800/50 border-none rounded-lg py-2 pl-9 pr-4 text-[10px] font-bold outline-none"
                         value={countrySearch}
                         onChange={(e) => setCountrySearch(e.target.value)}
@@ -351,8 +323,8 @@ export default function AddProductModal({
                         className={cn(
                           "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left text-[10px] font-bold",
                           selectedCountry?.iso === c.iso
-                            ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600"
-                            : "hover:bg-slate-50 dark:hover:bg-gray-800/50 text-slate-700 dark:text-slate-300",
+                            ? "bg-blue-50 text-blue-600"
+                            : "hover:bg-slate-50",
                         )}
                       >
                         <img
@@ -377,6 +349,7 @@ export default function AddProductModal({
               />
             </div>
 
+            {/* Row 5 - Spanning 2 columns for a cleaner look */}
             <div className="md:col-span-2 space-y-1">
               <label className={labelClasses}>
                 Available colors / variants
@@ -389,7 +362,7 @@ export default function AddProductModal({
             </div>
 
             <div className="space-y-1">
-              <label className={labelClasses}>IMEI / serial format regex</label>
+              <label className={labelClasses}>IMEI / serial regex</label>
               <div className="relative">
                 <Settings
                   className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
@@ -403,6 +376,7 @@ export default function AddProductModal({
               </div>
             </div>
 
+            {/* Full Width Fields */}
             <div className="md:col-span-3 space-y-1">
               <label className={labelClasses}>Product description</label>
               <textarea
@@ -414,9 +388,7 @@ export default function AddProductModal({
             </div>
 
             <div className="md:col-span-3 space-y-1">
-              <label className={labelClasses}>
-                Warranty terms & conditions URL
-              </label>
+              <label className={labelClasses}>Warranty URL</label>
               <input
                 name="termsUrl"
                 placeholder="https://sony.com/warranty-terms"
@@ -425,19 +397,19 @@ export default function AddProductModal({
             </div>
           </div>
 
-          <div className="mt-10 flex items-center gap-4">
+          <div className="mt-8 flex items-center gap-4 border-t border-slate-50 pt-8">
             <button
               type="submit"
               disabled={isSaving}
               className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-xl shadow-blue-600/20 flex items-center gap-2 active:scale-95 disabled:opacity-50"
             >
-              {isSaving && <Loader2 className="animate-spin" size={14} />}
-              Save product
+              {isSaving && <Loader2 className="animate-spin" size={14} />} Save
+              product
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="px-6 py-4 text-xs font-black text-slate-800 dark:text-slate-200 hover:text-slate-900 dark:hover:text-white transition-colors uppercase tracking-widest"
+              className="px-6 py-4 text-xs font-black text-slate-800 dark:text-slate-200 hover:text-slate-900 transition-colors uppercase tracking-widest"
             >
               Cancel
             </button>
