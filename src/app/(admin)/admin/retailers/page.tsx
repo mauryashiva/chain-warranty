@@ -11,25 +11,39 @@ import {
   CheckCircle2,
   Mail,
   Phone,
+  Settings2, // Premium Edit Icon
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddRetailerForm from "@/components/admin/retailer/AddRetailerForm";
+import EditRetailerModal from "@/components/admin/retailer/EditRetailerModal"; // 🟢 Added
 import { useAdminRetailers } from "@/hooks/admin/use-admin-retailers";
 
 export default function AdminRetailersPage() {
   const [showAddForm, setShowAddForm] = useState(false);
-  const [activeRetailer, setActiveRetailer] = useState<any>(null);
+  const [activeBrandsPreview, setActiveBrandsPreview] = useState<any>(null); // For the Brands modal
+  const [editingRetailer, setEditingRetailer] = useState<any>(null); // 🟢 For the Edit modal
 
   // Real Data Hook
-  const { retailers, loading, addRetailer, refresh } = useAdminRetailers();
+  const { retailers, loading, addRetailer, updateRetailer, refresh } =
+    useAdminRetailers();
 
   const handleSave = async (data: any) => {
     try {
       await addRetailer(data);
       setShowAddForm(false);
-      refresh(); // Trigger re-fetch of real data
+      refresh();
     } catch (err) {
       console.error("Failed to save retailer:", err);
+    }
+  };
+
+  const handleUpdate = async (id: string, data: any) => {
+    try {
+      await updateRetailer(id, data);
+      setEditingRetailer(null);
+      refresh();
+    } catch (err) {
+      console.error("Failed to update retailer:", err);
     }
   };
 
@@ -69,8 +83,18 @@ export default function AdminRetailersPage() {
         </div>
       )}
 
+      {/* --- MODAL: Edit Retailer Form --- */}
+      {editingRetailer && (
+        <EditRetailerModal
+          isOpen={!!editingRetailer}
+          retailer={editingRetailer}
+          onClose={() => setEditingRetailer(null)}
+          onSave={handleUpdate}
+        />
+      )}
+
       {/* --- MODAL: Authorised Brands Management (Real Data mapping) --- */}
-      {activeRetailer && (
+      {activeBrandsPreview && (
         <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-300">
           <div className="bg-white dark:bg-gray-900 w-full max-w-2xl rounded-[3rem] shadow-2xl border border-slate-100 dark:border-gray-800 overflow-hidden animate-in zoom-in-95 duration-300">
             <div className="px-10 py-8 border-b border-slate-50 dark:border-gray-800 flex items-center justify-between">
@@ -83,12 +107,12 @@ export default function AdminRetailersPage() {
                     Authorised Brands
                   </h2>
                   <p className="text-[10px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-widest">
-                    Permissions for {activeRetailer.name}
+                    Permissions for {activeBrandsPreview.name}
                   </p>
                 </div>
               </div>
               <button
-                onClick={() => setActiveRetailer(null)}
+                onClick={() => setActiveBrandsPreview(null)}
                 className="p-2 hover:bg-slate-100 dark:hover:bg-gray-800 rounded-full transition-colors"
               >
                 <X size={20} className="text-slate-400" strokeWidth={3} />
@@ -97,8 +121,7 @@ export default function AdminRetailersPage() {
 
             <div className="p-10 space-y-6">
               <div className="grid grid-cols-2 gap-4">
-                {/* Maps real brands authorized for this specific retailer */}
-                {activeRetailer.brands?.map((brand: any) => (
+                {activeBrandsPreview.brands?.map((brand: any) => (
                   <div
                     key={brand.id}
                     className="flex items-center justify-between p-5 rounded-2xl border-2 border-blue-600 bg-blue-50/50 dark:bg-blue-900/10 transition-all"
@@ -112,7 +135,7 @@ export default function AdminRetailersPage() {
               </div>
               <div className="pt-6 border-t border-slate-50 dark:border-gray-800 flex justify-end">
                 <button
-                  onClick={() => setActiveRetailer(null)}
+                  onClick={() => setActiveBrandsPreview(null)}
                   className="bg-slate-900 dark:bg-white text-white dark:text-slate-900 px-10 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl active:scale-95 transition-all"
                 >
                   Close Preview
@@ -250,7 +273,9 @@ export default function AdminRetailersPage() {
                           "px-3 py-1.5 rounded-lg text-[9px] font-black uppercase border",
                           r.status === "ACTIVE"
                             ? "bg-emerald-500/5 text-emerald-600 border-emerald-500/10"
-                            : "bg-slate-100 text-slate-400 border-slate-200",
+                            : r.status === "SUSPENDED"
+                              ? "bg-rose-500/5 text-rose-600 border-rose-500/10"
+                              : "bg-slate-100 text-slate-400 border-slate-200",
                         )}
                       >
                         {r.status}
@@ -259,11 +284,20 @@ export default function AdminRetailersPage() {
 
                     <td className="px-10 py-6 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <button className="p-2 bg-slate-50 dark:bg-gray-800 text-slate-400 hover:text-blue-600 rounded-xl transition-all border border-slate-100 dark:border-gray-700">
-                          <MoreHorizontal size={16} />
-                        </button>
+                        {/* 🟢 Premium Edit Button */}
                         <button
-                          onClick={() => setActiveRetailer(r)}
+                          onClick={() => setEditingRetailer(r)}
+                          className="group/btn flex items-center gap-2 bg-slate-50 dark:bg-gray-800 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all border border-slate-100 dark:border-gray-700"
+                        >
+                          <Settings2
+                            size={14}
+                            className="group-hover/btn:rotate-90 transition-transform duration-500"
+                          />
+                          Edit
+                        </button>
+
+                        <button
+                          onClick={() => setActiveBrandsPreview(r)}
                           className="px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all hover:opacity-80"
                         >
                           Brands

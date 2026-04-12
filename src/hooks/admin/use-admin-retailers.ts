@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { adminApiFetch } from "@/lib/api/client";
 
-// ✅ Updated interface to include PAN Number and other tax identifiers
+// ✅ Comprehensive interface matching your Controller and Schema
 export interface Retailer {
   id: string;
   name: string;
@@ -12,16 +12,17 @@ export interface Retailer {
   contactEmail?: string;
   contactPhone?: string;
   website?: string;
-  address?: string; // Added to match your controller
+  address?: string;
   city?: string;
   state?: string;
   pinCode?: string;
   country?: string;
   gstNumber?: string;
-  panNumber?: string; // ✅ Added PAN Number
-  taxId?: string; // ✅ Added Tax ID
+  panNumber?: string;
+  taxId?: string;
   status: "ACTIVE" | "INACTIVE" | "SUSPENDED";
-  brands?: { id: string; name: string }[];
+  brandIds?: string[]; // Used for updates
+  brands?: { id: string; name: string }[]; // Used for display
   _count?: {
     serials: number;
     warranties: number;
@@ -52,7 +53,6 @@ export function useAdminRetailers() {
 
   /**
    * 🏗️ Add a new Retailer
-   * (The formData object here will automatically contain panNumber from your form)
    */
   const addRetailer = async (formData: any) => {
     try {
@@ -62,16 +62,42 @@ export function useAdminRetailers() {
         body: JSON.stringify(formData),
       });
 
-      await fetchRetailers(); // Sync UI
+      await fetchRetailers(); // Sync UI immediately
       return result;
     } catch (err: any) {
-      setError(err.message);
-      throw err;
+      const msg = err.message || "Failed to onboard new retailer.";
+      setError(msg);
+      throw new Error(msg);
     }
   };
 
+  /**
+   * 🔄 Update Retailer Profile (ADDED THIS SECTION)
+   * Sends a PATCH request to synchronize changes from the Edit Modal
+   */
+  const updateRetailer = async (id: string, formData: any) => {
+    try {
+      setError(null);
+      const result = await adminApiFetch(`/retailers?id=${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(formData),
+      });
+
+      await fetchRetailers(); // Refresh local catalog
+      return result;
+    } catch (err: any) {
+      const msg = err.message || "Failed to update retailer profile.";
+      setError(msg);
+      throw new Error(msg);
+    }
+  };
+
+  /**
+   * 🗑️ Delete Retailer
+   */
   const deleteRetailer = async (id: string) => {
     try {
+      setError(null);
       await adminApiFetch(`/retailers?id=${id}`, {
         method: "DELETE",
       });
@@ -91,6 +117,7 @@ export function useAdminRetailers() {
     loading,
     error,
     addRetailer,
+    updateRetailer, // ✅ Exported for EditRetailerModal
     deleteRetailer,
     refresh: fetchRetailers,
   };

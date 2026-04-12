@@ -1,4 +1,5 @@
 import { prisma } from "@/server/db/prisma";
+import { RetailerStatus } from "@prisma/client";
 
 export const RetailerController = {
   /**
@@ -21,7 +22,6 @@ export const RetailerController = {
 
   /**
    * 🏗️ Create a new Retailer entry
-   * Optimized to handle Many-to-Many brand connections
    */
   async createRetailer(data: any) {
     const generatedSlug = data.name.toLowerCase().trim().replace(/\s+/g, "-");
@@ -58,8 +58,6 @@ export const RetailerController = {
         taxId: data.taxId,
         status: "ACTIVE",
 
-        // ✅ MANY-TO-MANY CONNECTION:
-        // This links the retailer to all selected brands at once
         brands:
           data.brandIds && data.brandIds.length > 0
             ? {
@@ -68,7 +66,58 @@ export const RetailerController = {
             : undefined,
       },
       include: {
-        brands: true, // Returns the connected brands in the response
+        brands: true,
+      },
+    });
+  },
+
+  /**
+   * 🔄 Update existing Retailer profile
+   * Handles Many-to-Many brand synchronization and status updates
+   */
+  async updateRetailer(id: string, data: any) {
+    // 1. Check if retailer exists
+    const existing = await prisma.retailer.findUnique({
+      where: { id },
+      include: { brands: true },
+    });
+
+    if (!existing) {
+      throw new Error("Registry Error: Retailer not found.");
+    }
+
+    // 2. Execute Update
+    // Note: slug, gstNumber, and panNumber are OMITTED to ensure immutability
+    return await prisma.retailer.update({
+      where: { id },
+      data: {
+        name: data.name,
+        type: data.type,
+        contactEmail: data.contactEmail,
+        contactPhone: data.contactPhone,
+        website: data.website,
+        address: data.address,
+        city: data.city,
+        state: data.state,
+        pinCode: data.pinCode,
+        country: data.country,
+        taxId: data.taxId,
+        status: data.status
+          ? (data.status.toUpperCase() as RetailerStatus)
+          : undefined,
+
+        // 🏷️ Synchronize Many-to-Many Brand relationships
+        // 'set' replaces the old brand list with the new one provided
+        brands: data.brandIds
+          ? {
+              set: data.brandIds.map((brandId: string) => ({ id: brandId })),
+            }
+          : undefined,
+      },
+      include: {
+        brands: {
+          select: { id: true, name: true },
+        },
       },
     });
   },
