@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, ChangeEvent, DragEvent } from "react";
+import { useRef, useState, ChangeEvent, DragEvent, useMemo } from "react";
 import {
   Upload,
   Info,
@@ -12,16 +12,16 @@ import {
   Truck,
   Store,
   FileText,
-  Keyboard,
   Loader2,
 } from "lucide-react";
-import { useAdminBrands } from "@/hooks/admin/use-admin-brands";
 import { useAdminProducts } from "@/hooks/admin/use-admin-products";
 import { useAdminSerials } from "@/hooks/admin/use-admin-serials";
-import { useAdminRetailers } from "@/hooks/admin/use-admin-retailers"; // Added hook
+import { useAdminRetailers } from "@/hooks/admin/use-admin-retailers";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { cn } from "@/lib/utils";
 import Papa from "papaparse";
+// 🏷️ Import the new premium BrandSelect
+import BrandSelect from "@/components/common/Form/BrandSelect";
 
 interface BulkUploadSerialsModalProps {
   isOpen: boolean;
@@ -48,14 +48,11 @@ export default function BulkUploadSerialsModal({
   const [entryMode, setEntryMode] = useState<"file" | "manual">("file");
   const [isUploading, setIsUploading] = useState(false);
 
-  const { brands } = useAdminBrands();
   const { products } = useAdminProducts();
   const { uploadSerials } = useAdminSerials();
-  const { retailers } = useAdminRetailers(); // Fetching retailers
+  const { retailers } = useAdminRetailers();
 
   useClickOutside(modalRef, onClose);
-
-  if (!isOpen) return null;
 
   // --- CSV Parser ---
   const parseCSV = (file: File): Promise<string[]> => {
@@ -139,6 +136,8 @@ export default function BulkUploadSerialsModal({
     }
   };
 
+  if (!isOpen) return null;
+
   const labelClasses =
     "text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 mb-2 block ml-1";
   const inputClasses =
@@ -181,28 +180,14 @@ export default function BulkUploadSerialsModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-6">
             <div className="space-y-1">
               <label className={labelClasses}>Brand *</label>
-              <div className="relative group">
-                <Layers
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors"
-                  size={16}
-                />
-                <select
-                  className={cn(inputClasses, "pl-12")}
-                  value={selectedBrand}
-                  onChange={(e) => setSelectedBrand(e.target.value)}
-                >
-                  <option value="">Select brand</option>
-                  {brands?.map((b: any) => (
-                    <option key={b.id} value={b.id}>
-                      {b.name}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                  size={16}
-                />
-              </div>
+              {/* 🏷️ Using premium searchable BrandSelect */}
+              <BrandSelect
+                value={selectedBrand}
+                onChange={(id) => {
+                  setSelectedBrand(id);
+                  setSelectedProduct(""); // Reset product when brand changes
+                }}
+              />
             </div>
 
             <div className="space-y-1">
@@ -213,7 +198,7 @@ export default function BulkUploadSerialsModal({
                   size={16}
                 />
                 <select
-                  className={cn(inputClasses, "pl-12")}
+                  className={cn(inputClasses, "pl-12 cursor-pointer")}
                   value={selectedProduct}
                   onChange={(e) => setSelectedProduct(e.target.value)}
                 >
@@ -285,7 +270,7 @@ export default function BulkUploadSerialsModal({
                   size={16}
                 />
                 <select
-                  className={cn(inputClasses, "pl-12")}
+                  className={cn(inputClasses, "pl-12 cursor-pointer")}
                   value={retailerId}
                   onChange={(e) => setRetailerId(e.target.value)}
                 >
@@ -381,7 +366,7 @@ export default function BulkUploadSerialsModal({
           <div className="flex gap-4">
             <button
               onClick={onClose}
-              className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500"
+              className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-800 transition-colors"
             >
               Cancel
             </button>

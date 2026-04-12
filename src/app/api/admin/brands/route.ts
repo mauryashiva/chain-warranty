@@ -3,7 +3,6 @@ import { BrandController } from "@/server/admin/controller/brand.controller";
 
 /**
  * 📥 GET: Fetch all brands from the catalog
- * Database logic and relations are handled by the Controller
  */
 export async function GET() {
   try {
@@ -23,7 +22,6 @@ export async function GET() {
 
 /**
  * 📤 POST: Create a new brand
- * Validation, slug generation, and DB insertion are handled by the Controller
  */
 export async function POST(req: NextRequest) {
   try {
@@ -44,8 +42,43 @@ export async function POST(req: NextRequest) {
 }
 
 /**
+ * 🔄 PATCH: Update brand details (Status, Info, etc.)
+ * This handles the "Active/Inactive" toggle and "Edit" form
+ */
+export async function PATCH(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    const body = await req.json();
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: "Brand ID is required for updates" },
+        { status: 400 },
+      );
+    }
+
+    const updatedBrand = await BrandController.updateBrand(id, body);
+
+    return NextResponse.json({
+      success: true,
+      data: updatedBrand,
+      message: "Brand registry updated successfully",
+    });
+  } catch (error: any) {
+    console.error("[API_BRANDS_PATCH]:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: error.message || "Internal server error during update",
+      },
+      { status: 400 },
+    );
+  }
+}
+
+/**
  * 🗑️ DELETE: Remove a brand from the catalog
- * Integrity checks (e.g., checking for active products) are handled by the Controller
  */
 export async function DELETE(req: NextRequest) {
   try {
@@ -59,7 +92,6 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    // Pass the ID to the controller to handle relation checks and deletion
     await BrandController.deleteBrand(id);
 
     return NextResponse.json({
@@ -73,7 +105,7 @@ export async function DELETE(req: NextRequest) {
         success: false,
         message: error.message || "Internal server error during deletion",
       },
-      { status: 400 }, // Using 400 as the controller will likely throw validation/integrity errors
+      { status: 400 },
     );
   }
 }

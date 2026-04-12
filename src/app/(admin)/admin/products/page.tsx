@@ -1,16 +1,27 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Plus, Search, Loader2, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddProductModal from "@/components/admin/product/AddProductModal";
+import EditProductModal from "@/components/admin/product/EditProductModal";
 import { useAdminProducts } from "@/hooks/admin/use-admin-products";
 
 export default function AdminProductsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const { products, loading, addProduct, fetchProducts } = useAdminProducts();
 
+  // Filters State
+  const [brandFilter, setBrandFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
+  const { products, loading, addProduct, updateProduct, fetchProducts } =
+    useAdminProducts();
+
+  // --- Handlers ---
   const handleSaveProduct = async (data: any) => {
     try {
       await addProduct(data);
@@ -21,16 +32,65 @@ export default function AdminProductsPage() {
     }
   };
 
+  const handleUpdateProduct = async (id: string, data: any) => {
+    try {
+      await updateProduct(id, data);
+      setIsEditModalOpen(false);
+      setSelectedProduct(null);
+      fetchProducts();
+    } catch (err) {
+      console.error("Update Error:", err);
+    }
+  };
+
+  // --- Dynamic Filter Options ---
+  const dynamicBrands = useMemo(() => {
+    const brandNames =
+      products?.map((p: any) => p.brand?.name).filter(Boolean) || [];
+    return Array.from(new Set(brandNames));
+  }, [products]);
+
+  const dynamicCategories = useMemo(() => {
+    const categories =
+      products?.map((p: any) => p.category).filter(Boolean) || [];
+    return Array.from(new Set(categories));
+  }, [products]);
+
+  // --- Filtered Products Logic ---
+  const filteredProducts = products?.filter((p: any) => {
+    const matchesSearch =
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.sku?.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesBrand = !brandFilter || p.brand?.name === brandFilter;
+    const matchesCategory = !categoryFilter || p.category === categoryFilter;
+    const matchesStatus = !statusFilter || p.status === statusFilter;
+
+    return matchesSearch && matchesBrand && matchesCategory && matchesStatus;
+  });
+
   const selectClasses =
     "appearance-none bg-transparent text-[11px] font-black uppercase tracking-widest outline-none border-none text-slate-900 dark:text-white cursor-pointer pr-8";
 
   return (
     <div className="space-y-8 min-h-screen bg-white dark:bg-gray-950 pb-20 p-4 md:p-8">
+      {/* Modals */}
       <AddProductModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveProduct}
       />
+
+      {selectedProduct && (
+        <EditProductModal
+          isOpen={isEditModalOpen}
+          product={selectedProduct}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedProduct(null);
+          }}
+          onSave={handleUpdateProduct}
+        />
+      )}
 
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
@@ -66,9 +126,19 @@ export default function AdminProductsPage() {
         </div>
 
         <div className="flex items-center gap-6">
+          {/* Brand Filter */}
           <div className="relative flex items-center">
-            <select className={selectClasses}>
+            <select
+              className={selectClasses}
+              value={brandFilter}
+              onChange={(e) => setBrandFilter(e.target.value)}
+            >
               <option value="">All brands</option>
+              {dynamicBrands.map((brand: any) => (
+                <option key={brand} value={brand}>
+                  {brand}
+                </option>
+              ))}
             </select>
             <ChevronDown
               size={12}
@@ -76,9 +146,19 @@ export default function AdminProductsPage() {
             />
           </div>
 
+          {/* Category Filter */}
           <div className="relative flex items-center border border-slate-900 dark:border-white rounded-sm px-3 py-1">
-            <select className={selectClasses}>
+            <select
+              className={selectClasses}
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
               <option value="">All categories</option>
+              {dynamicCategories.map((cat: any) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
             </select>
             <ChevronDown
               size={12}
@@ -86,9 +166,17 @@ export default function AdminProductsPage() {
             />
           </div>
 
+          {/* Status Filter */}
           <div className="relative flex items-center">
-            <select className={selectClasses}>
+            <select
+              className={selectClasses}
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
               <option value="">All status</option>
+              <option value="ACTIVE">Active</option>
+              <option value="INACTIVE">Inactive</option>
+              <option value="DISCONTINUED">Discontinued</option>
             </select>
             <ChevronDown
               size={12}
@@ -142,7 +230,7 @@ export default function AdminProductsPage() {
                   />
                 </td>
               </tr>
-            ) : products?.length === 0 ? (
+            ) : filteredProducts?.length === 0 ? (
               <tr>
                 <td colSpan={9} className="py-24 text-center">
                   <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
@@ -151,7 +239,7 @@ export default function AdminProductsPage() {
                 </td>
               </tr>
             ) : (
-              products.map((p: any) => (
+              filteredProducts.map((p: any) => (
                 <tr
                   key={p.id}
                   className="border-b border-slate-50 dark:border-gray-900 hover:bg-slate-50 dark:hover:bg-gray-900/40 transition-colors group"
@@ -187,13 +275,28 @@ export default function AdminProductsPage() {
                     {p._count?.serials?.toLocaleString() || "0"}
                   </td>
                   <td className="px-4 py-6">
-                    <span className="text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 bg-emerald-500/10 text-emerald-600 rounded-sm">
-                      Active
+                    <span
+                      className={cn(
+                        "text-[9px] font-black uppercase tracking-tighter px-2 py-0.5 rounded-sm",
+                        p.status === "ACTIVE"
+                          ? "bg-emerald-500/10 text-emerald-600"
+                          : p.status === "DISCONTINUED"
+                            ? "bg-rose-500/10 text-rose-600"
+                            : "bg-amber-500/10 text-amber-600",
+                      )}
+                    >
+                      {p.status?.toLowerCase() || "inactive"}
                     </span>
                   </td>
                   <td className="px-4 py-6 text-right">
                     <div className="flex items-center justify-end gap-4">
-                      <button className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+                      <button
+                        onClick={() => {
+                          setSelectedProduct(p);
+                          setIsEditModalOpen(true);
+                        }}
+                        className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                      >
                         Edit
                       </button>
                       <button className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">

@@ -25,13 +25,13 @@ export async function GET() {
 }
 
 /**
- * 📤 POST: Register a new Product Model with all 16+ fields
+ * 📤 POST: Register a new Product Model
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
 
-    // 1. Mandatory Field Validation (Server-side)
+    // 1. Mandatory Field Validation
     const requiredFields = [
       "name",
       "brandId",
@@ -64,16 +64,48 @@ export async function POST(req: NextRequest) {
     );
   } catch (error: any) {
     console.error("[API_PRODUCTS_POST]:", error);
-
-    // Handle specific Prisma/Business Logic errors (like SKU conflicts)
     const statusCode = error.message.includes("exists") ? 409 : 500;
-
     return NextResponse.json(
       {
         success: false,
         message: error.message || "Failed to initialize product registration.",
       },
       { status: statusCode },
+    );
+  }
+}
+
+/**
+ * 🔄 PATCH: Update an existing Product specification
+ */
+export async function PATCH(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+    const body = await req.json();
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: "Asset ID is required for update." },
+        { status: 400 },
+      );
+    }
+
+    const updatedProduct = await ProductController.updateProduct(id, body);
+
+    return NextResponse.json({
+      success: true,
+      data: updatedProduct,
+      message: "Product specifications updated successfully.",
+    });
+  } catch (error: any) {
+    console.error("[API_PRODUCTS_PATCH]:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        message: error.message || "Failed to synchronize asset updates.",
+      },
+      { status: 500 },
     );
   }
 }

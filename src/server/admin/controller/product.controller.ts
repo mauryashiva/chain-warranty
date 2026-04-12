@@ -46,16 +46,11 @@ export const ProductController = {
       data: {
         name: data.name,
         modelNumber: data.modelNumber,
-        sku: normalizedSku, // Standardize storage
+        sku: normalizedSku,
         category: data.category,
         subCategory: data.subCategory,
-
-        // Relational Link
         brandId: data.brandId,
-
         description: data.description,
-
-        // Data Type Parsing with safety checks
         warrantyPeriod: data.warrantyPeriod?.toString(),
         priceMin:
           data.priceMin && data.priceMin !== ""
@@ -66,22 +61,65 @@ export const ProductController = {
             ? parseFloat(data.priceMax)
             : null,
         currency: data.currency || "USD",
-
-        // Date Handling
         launchDate: data.launchDate ? new Date(data.launchDate) : null,
-
-        // Specification Metadata
         manufactureCountry: data.manufactureCountry,
         hsnCode: data.hsnCode,
         variants: data.variants,
         serialRegex: data.serialRegex,
         termsUrl: data.termsUrl,
-
-        // ✅ FIXED: Force status to UPPERCASE to match Prisma Enum (ACTIVE, INACTIVE, etc.)
-        // If data.status is "Active" or "active", it becomes "ACTIVE"
+        // Force status to UPPERCASE for Enum safety
         status: data.status ? data.status.toUpperCase() : "ACTIVE",
-
         isDeleted: false,
+      },
+      include: {
+        brand: true,
+      },
+    });
+  },
+
+  /**
+   * 🔄 Update existing product specification
+   */
+  async updateProduct(id: string, data: any) {
+    // 1. Check if product exists
+    const existing = await prisma.product.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      throw new Error("Registry Error: Product not found.");
+    }
+
+    // 2. Data Transformation (Parsing similar to Create logic)
+    return await prisma.product.update({
+      where: { id },
+      data: {
+        name: data.name,
+        category: data.category,
+        subCategory: data.subCategory,
+        description: data.description,
+        warrantyPeriod: data.warrantyPeriod?.toString(),
+        priceMin:
+          data.priceMin !== undefined
+            ? data.priceMin && data.priceMin !== ""
+              ? parseFloat(data.priceMin)
+              : null
+            : undefined,
+        priceMax:
+          data.priceMax !== undefined
+            ? data.priceMax && data.priceMax !== ""
+              ? parseFloat(data.priceMax)
+              : null
+            : undefined,
+        currency: data.currency,
+        launchDate: data.launchDate ? new Date(data.launchDate) : null,
+        manufactureCountry: data.manufactureCountry,
+        hsnCode: data.hsnCode,
+        variants: data.variants,
+        serialRegex: data.serialRegex,
+        termsUrl: data.termsUrl,
+        // Ensure status matches Enum (ACTIVE, INACTIVE, DISCONTINUED)
+        status: data.status ? data.status.toUpperCase() : undefined,
       },
       include: {
         brand: true,

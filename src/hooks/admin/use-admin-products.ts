@@ -21,7 +21,7 @@ export interface Product {
   // Pricing & Value
   priceMin?: number;
   priceMax?: number;
-  currency?: string; // 🆕 Added to match your new UI and Database
+  currency?: string;
 
   // Metadata
   launchDate?: string;
@@ -31,7 +31,7 @@ export interface Product {
   serialRegex?: string;
   description?: string;
   termsUrl?: string;
-  status: string;
+  status: "ACTIVE" | "INACTIVE" | "DISCONTINUED";
   _count?: {
     serials: number;
   };
@@ -48,7 +48,7 @@ export function useAdminProducts() {
       setLoading(true);
       setError(null);
       const data = await adminApiFetch<Product[]>("/products");
-      setProducts(data);
+      setProducts(data || []);
     } catch (err: any) {
       setError(err.message || "Failed to sync product catalog.");
     } finally {
@@ -56,7 +56,7 @@ export function useAdminProducts() {
     }
   }, []);
 
-  // --- 2. Add New Product (Supports all extended fields) ---
+  // --- 2. Add New Product ---
   const addProduct = async (productData: any) => {
     try {
       setError(null);
@@ -65,7 +65,6 @@ export function useAdminProducts() {
         body: JSON.stringify(productData),
       });
 
-      // Refresh the local state to show the new product immediately
       await fetchProducts();
       return result;
     } catch (err: any) {
@@ -75,9 +74,29 @@ export function useAdminProducts() {
     }
   };
 
-  // --- 3. Remove Product ---
+  // ✅ --- 3. Update Product (ADDED THIS SECTION) ---
+  const updateProduct = async (id: string, productData: any) => {
+    try {
+      setError(null);
+      const result = await adminApiFetch<Product>(`/products?id=${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(productData),
+      });
+
+      // Refresh catalog to show changes immediately
+      await fetchProducts();
+      return result;
+    } catch (err: any) {
+      const msg = err.message || "Failed to update asset specification.";
+      setError(msg);
+      throw new Error(msg);
+    }
+  };
+
+  // --- 4. Remove Product ---
   const deleteProduct = async (id: string) => {
     try {
+      setError(null);
       await adminApiFetch(`/products?id=${id}`, {
         method: "DELETE",
       });
@@ -97,8 +116,9 @@ export function useAdminProducts() {
     products,
     loading,
     error,
-    fetchProducts, // Manual Refresh
-    addProduct, // Create Function
-    deleteProduct, // Delete Function
+    fetchProducts,
+    addProduct,
+    updateProduct, // ✅ Now exported for the Edit modal
+    deleteProduct,
   };
 }

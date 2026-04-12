@@ -15,6 +15,7 @@ import {
   CreditCard,
   CheckCircle2,
   Tags,
+  Image as ImageIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClickOutside } from "@/hooks/use-click-outside";
@@ -60,6 +61,7 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
 
   const loadLocationData = async () => {
     if (allLocationData.length > 0) return;
+    setIsSaving(true); // Temporary visual lock
     setIsLoadingJson(true);
     try {
       const data =
@@ -69,6 +71,7 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
       console.error("Failed to load location data", error);
     } finally {
       setIsLoadingJson(false);
+      setIsSaving(false);
     }
   };
 
@@ -318,7 +321,6 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
             </div>
           </div>
 
-          {/* Compliance & Tax */}
           <div className="space-y-1">
             <label className={labelClasses}>PAN Number</label>
             <div className="relative">
@@ -531,7 +533,6 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
             )}
           </div>
 
-          {/* Detailed Address */}
           <div className="md:col-span-2 space-y-1">
             <label className={labelClasses}>Detailed Address *</label>
             <div className="relative">
@@ -595,49 +596,73 @@ export default function AddRetailerForm({ onSave }: AddRetailerFormProps) {
                 Fetching Catalog...
               </div>
             ) : (
-              brands.map((brand: any) => {
-                const isSelected = selectedBrandIds.includes(brand.id);
-                return (
-                  <button
-                    key={brand.id}
-                    type="button"
-                    onClick={() => toggleBrand(brand.id)}
-                    className={cn(
-                      "group relative flex items-center gap-3 p-3 rounded-2xl border transition-all duration-300",
-                      isSelected
-                        ? "bg-blue-600 border-blue-600 shadow-lg shadow-blue-600/20"
-                        : "bg-slate-50 dark:bg-gray-800 border-slate-100 dark:border-gray-800 hover:border-blue-400",
-                    )}
-                  >
-                    <div
+              brands
+                .filter((b: any) => b.status === "ACTIVE") // 🛡️ Filter only active brands
+                .map((brand: any) => {
+                  const isSelected = selectedBrandIds.includes(brand.id);
+                  const flagIso = countryOptions
+                    .find((c) => c.country === brand.country)
+                    ?.iso.toLowerCase();
+
+                  return (
+                    <button
+                      key={brand.id}
+                      type="button"
+                      onClick={() => toggleBrand(brand.id)}
                       className={cn(
-                        "w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0",
+                        "group relative flex items-center gap-3 p-3 rounded-2xl border transition-all duration-300",
                         isSelected
-                          ? "bg-white text-blue-600"
-                          : "bg-white dark:bg-gray-900 text-slate-400 group-hover:text-blue-600",
+                          ? "bg-blue-600 border-blue-600 shadow-lg shadow-blue-600/20"
+                          : "bg-slate-50 dark:bg-gray-800 border-slate-100 dark:border-gray-800 hover:border-blue-400",
                       )}
                     >
-                      {brand.name[0]}
-                    </div>
-                    <span
-                      className={cn(
-                        "text-[10px] font-black uppercase tracking-tight truncate",
-                        isSelected
-                          ? "text-white"
-                          : "text-slate-800 dark:text-slate-200",
+                      <div className="relative">
+                        <div
+                          className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shrink-0 overflow-hidden",
+                            isSelected
+                              ? "bg-white text-blue-600"
+                              : "bg-white dark:bg-gray-900 text-slate-400 group-hover:text-blue-600",
+                          )}
+                        >
+                          {brand.logoUrl ? (
+                            <img
+                              src={brand.logoUrl}
+                              className="w-full h-full object-contain p-1"
+                              alt=""
+                            />
+                          ) : (
+                            brand.name[0]
+                          )}
+                        </div>
+                        {/* 🛡️ Country Badge */}
+                        {flagIso && (
+                          <img
+                            src={`https://flagcdn.com/w20/${flagIso}.png`}
+                            className="absolute -bottom-1 -right-1 w-4 h-3 border border-white dark:border-gray-900 rounded-sm shadow-sm z-10"
+                            alt=""
+                          />
+                        )}
+                      </div>
+                      <span
+                        className={cn(
+                          "text-[10px] font-black uppercase tracking-tight truncate",
+                          isSelected
+                            ? "text-white"
+                            : "text-slate-800 dark:text-slate-200",
+                        )}
+                      >
+                        {brand.name}
+                      </span>
+                      {isSelected && (
+                        <CheckCircle2
+                          size={12}
+                          className="absolute -top-1.5 -right-1.5 text-blue-600 bg-white rounded-full border-2 border-white"
+                        />
                       )}
-                    >
-                      {brand.name}
-                    </span>
-                    {isSelected && (
-                      <CheckCircle2
-                        size={12}
-                        className="absolute -top-1.5 -right-1.5 text-blue-600 bg-white rounded-full border-2 border-white"
-                      />
-                    )}
-                  </button>
-                );
-              })
+                    </button>
+                  );
+                })
             )}
           </div>
         </div>

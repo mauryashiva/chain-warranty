@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Plus,
   Search,
@@ -8,18 +9,23 @@ import {
   AlertCircle,
   Settings2,
   Package2,
-  ShieldOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddBrandModal from "@/components/admin/brand/AddBrandModal";
+import EditBrandModal from "@/components/admin/brand/EditBrandModal";
 import { useAdminBrands } from "@/hooks/admin/use-admin-brands";
 
 export default function AdminBrandsPage() {
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedBrand, setSelectedBrand] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  const { brands, isLoading, error, createBrand, refresh } = useAdminBrands();
+  const { brands, isLoading, error, createBrand, updateBrand, refresh } =
+    useAdminBrands();
 
+  // --- Handlers ---
   const handleSaveBrand = async (formData: any) => {
     try {
       await createBrand(formData);
@@ -27,6 +33,16 @@ export default function AdminBrandsPage() {
       refresh();
     } catch (err) {
       console.error("Failed to save brand:", err);
+    }
+  };
+
+  const handleUpdateBrand = async (id: string, formData: any) => {
+    try {
+      await updateBrand(id, formData);
+      setIsEditModalOpen(false);
+      refresh();
+    } catch (err) {
+      console.error("Failed to update brand:", err);
     }
   };
 
@@ -42,11 +58,24 @@ export default function AdminBrandsPage() {
 
   return (
     <div className="space-y-10 bg-white dark:bg-gray-900 min-h-screen pb-24 px-6 md:px-10 pt-8">
+      {/* Modals */}
       <AddBrandModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveBrand}
       />
+
+      {selectedBrand && (
+        <EditBrandModal
+          isOpen={isEditModalOpen}
+          brand={selectedBrand}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedBrand(null);
+          }}
+          onSave={handleUpdateBrand}
+        />
+      )}
 
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-100 dark:border-gray-800 pb-8">
@@ -84,7 +113,9 @@ export default function AdminBrandsPage() {
           {
             label: "Active",
             value:
-              brands?.filter((b: any) => b.status === "Active").length || 0,
+              brands?.filter(
+                (b: any) => b.status === "ACTIVE" || b.status === "Active",
+              ).length || 0,
           },
           {
             label: "Products",
@@ -172,7 +203,6 @@ export default function AdminBrandsPage() {
                     key={brand.id}
                     className="hover:bg-slate-50/80 dark:hover:bg-gray-800/40 transition-colors group"
                   >
-                    {/* Brand Name & ID stacked vertically */}
                     <td className="px-10 py-6 whitespace-nowrap">
                       <div className="flex flex-col gap-0.5">
                         <span className="text-[14px] font-black text-gray-900 dark:text-white uppercase tracking-tight">
@@ -207,34 +237,34 @@ export default function AdminBrandsPage() {
                       <span
                         className={cn(
                           "text-[9px] font-black uppercase tracking-widest px-2.5 py-1.5 rounded-lg border",
-                          brand.status === "Active"
+                          brand.status === "ACTIVE" || brand.status === "Active"
                             ? "text-emerald-600 bg-emerald-500/5 border-emerald-500/10"
-                            : "text-slate-400 bg-slate-100/50 border-slate-200 dark:border-gray-800",
+                            : "text-rose-600 bg-rose-500/5 border-rose-500/10",
                         )}
                       >
                         {brand.status}
                       </span>
                     </td>
-                    {/* Actions Centered */}
                     <td className="px-10 py-6">
                       <div className="flex items-center justify-center gap-2">
                         <button
+                          onClick={() => {
+                            setSelectedBrand(brand);
+                            setIsEditModalOpen(true);
+                          }}
                           title="Edit Brand"
-                          className="p-2.5 bg-slate-50 dark:bg-gray-800 text-slate-800 dark:text-slate-200 hover:bg-blue-600 hover:text-white transition-all rounded-xl border border-slate-100 dark:border-gray-700"
+                          className="p-2.5 bg-slate-50 dark:bg-gray-800 text-slate-800 dark:text-slate-200 hover:bg-blue-600 hover:text-white transition-all rounded-xl border border-slate-100 dark:border-gray-700 active:scale-95"
                         >
                           <Settings2 size={14} />
                         </button>
                         <button
+                          onClick={() =>
+                            router.push(`/admin/products?brandId=${brand.id}`)
+                          }
                           title="View Products"
-                          className="p-2.5 bg-slate-50 dark:bg-gray-800 text-slate-800 dark:text-slate-200 hover:bg-blue-600 hover:text-white transition-all rounded-xl border border-slate-100 dark:border-gray-700"
+                          className="p-2.5 bg-slate-50 dark:bg-gray-800 text-slate-800 dark:text-slate-200 hover:bg-blue-600 hover:text-white transition-all rounded-xl border border-slate-100 dark:border-gray-700 active:scale-95"
                         >
                           <Package2 size={14} />
-                        </button>
-                        <button
-                          title="Disable Brand"
-                          className="p-2.5 bg-slate-50 dark:bg-gray-800 text-slate-800 dark:text-slate-200 hover:bg-rose-600 hover:text-white transition-all rounded-xl border border-slate-100 dark:border-gray-700"
-                        >
-                          <ShieldOff size={14} />
                         </button>
                       </div>
                     </td>
