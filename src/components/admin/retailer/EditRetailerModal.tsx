@@ -3,7 +3,6 @@
 import { useRef, useState, useEffect } from "react";
 import {
   X,
-  Store,
   Mail,
   MapPin,
   Lock,
@@ -18,13 +17,21 @@ import {
   Ban,
   Activity,
   PowerOff,
+  Store,
+  ChevronDown,
 } from "lucide-react";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { useAdminBrands } from "@/hooks/admin/use-admin-brands";
 import { countryOptions } from "@/components/common/countries";
 import { cn } from "@/lib/utils";
-import RetailerStatusBadge from "./RetailerStatusBadge"; // Importing your existing badge component
-import LocationSelector from "@/components/common/Form/LocationSelector";
+import RetailerStatusBadge from "./RetailerStatusBadge";
+// 🌍 Import Advanced Composable Components
+import LocationRoot, {
+  CountryField,
+  PhoneField,
+  StateField,
+  CityField,
+} from "@/components/common/Form/LocationSelector";
 
 interface EditRetailerModalProps {
   isOpen: boolean;
@@ -120,11 +127,13 @@ export default function EditRetailerModal({
   };
 
   const labelClasses =
-    "text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400 mb-2 block ml-1";
+    "text-[10px] font-black uppercase tracking-[0.2em] text-slate-800 dark:text-slate-200 mb-2 block ml-1";
   const lockedInput =
-    "w-full px-4 py-3.5 rounded-2xl bg-slate-50 dark:bg-gray-800/40 border border-slate-100 dark:border-gray-800 text-[11px] font-bold text-slate-400 flex items-center gap-2 italic cursor-not-allowed shadow-inner";
+    "w-full px-4 py-3.5 rounded-2xl bg-slate-50 dark:bg-gray-800/40 border border-slate-100 dark:border-gray-800 text-[11px] font-bold text-slate-400 flex items-center gap-2 italic cursor-not-allowed shadow-inner min-h-[46px]";
   const editableInput =
-    "w-full px-4 py-3.5 rounded-xl bg-slate-100 dark:bg-gray-800 border-none text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 ring-blue-600/20 transition-all appearance-none";
+    "w-full px-4 py-3.5 rounded-xl bg-slate-100 dark:bg-gray-800 border-none text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 ring-blue-600/20 transition-all appearance-none min-h-[46px]";
+  const secondaryDescClasses =
+    "text-[10px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight";
   const sectionHeader =
     "flex items-center gap-2 mb-6 pb-2 border-b border-slate-100 dark:border-gray-800";
   const sectionTitle =
@@ -136,7 +145,7 @@ export default function EditRetailerModal({
         ref={modalRef}
         className="relative w-full max-w-5xl bg-white dark:bg-gray-900 rounded-[3rem] shadow-2xl overflow-hidden border border-slate-200 dark:border-gray-800 animate-in zoom-in-95"
       >
-        {/* Header with Live Status Badge */}
+        {/* Header */}
         <div className="px-10 py-8 border-b border-slate-100 dark:border-gray-800 flex items-center justify-between bg-slate-50/30 dark:bg-gray-900/50">
           <div className="flex items-center gap-4">
             <div className="p-3 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
@@ -146,13 +155,12 @@ export default function EditRetailerModal({
               <h2 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">
                 Modify Retailer
               </h2>
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                Partner ID: {retailer.id}
+              <p className={cn(secondaryDescClasses, "tracking-widest")}>
+                Partner ID: {retailer.id.slice(-8).toUpperCase()}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-4">
-            {/* 🟢 Live Status Badge in Header */}
             <RetailerStatusBadge status={status} />
             <button
               onClick={onClose}
@@ -167,7 +175,7 @@ export default function EditRetailerModal({
           onSubmit={handleSubmit}
           className="p-10 space-y-12 overflow-y-auto max-h-[75vh] custom-scrollbar"
         >
-          {/* GLOBAL STATUS TOGGLE BUTTONS */}
+          {/* Status Section */}
           <section className="bg-slate-50 dark:bg-gray-800/40 p-6 rounded-[2.5rem] border border-slate-100 dark:border-gray-800">
             <label className={labelClasses}>
               Update Partner Lifecycle Status
@@ -206,7 +214,7 @@ export default function EditRetailerModal({
                   className={cn(
                     "flex-1 flex items-center justify-center gap-3 py-4 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all border-2",
                     status === item.id
-                      ? `${item.activeBg} border-transparent text-white shadow-lg shadow-${item.id === "ACTIVE" ? "emerald" : item.id === "INACTIVE" ? "amber" : "rose"}-600/20`
+                      ? `${item.activeBg} border-transparent text-white shadow-lg shadow-blue-600/20`
                       : `${item.bg} border-transparent ${item.color} hover:border-slate-200 dark:hover:border-gray-700`,
                   )}
                 >
@@ -281,88 +289,104 @@ export default function EditRetailerModal({
               <Building2 size={14} className="text-blue-600" />
               <h3 className={sectionTitle}>Business Presence</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-x-6 gap-y-8">
-              <div className="col-span-1 md:col-span-4">
-                <LocationSelector
-                  fields={["phone", "country", "state", "city"]}
-                  values={locationValues}
-                  onChange={handleLocationChange}
+
+            <LocationRoot
+              values={locationValues}
+              onChange={handleLocationChange}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-x-6 gap-y-8">
+                <PhoneField label="Contact Phone" className="md:col-span-1" />
+                <CountryField label="Country" className="md:col-span-1" />
+                <StateField
+                  label="State / Province"
+                  className="md:col-span-1"
                 />
-              </div>
+                <CityField label="City" className="md:col-span-1" />
 
-              <div className="md:col-span-1 space-y-1">
-                <label className={labelClasses}>Business Type</label>
-                <select
-                  name="type"
-                  defaultValue={retailer.type}
-                  className={cn(editableInput, "w-full cursor-pointer")}
-                >
-                  <option value="ONLINE">Online Store</option>
-                  <option value="OFFLINE">Brick & Mortar</option>
-                  <option value="BOTH">Omnichannel</option>
-                </select>
-              </div>
+                <div className="md:col-span-1 space-y-1">
+                  <label className={labelClasses}>Business Type</label>
+                  <div className="relative">
+                    <select
+                      name="type"
+                      defaultValue={retailer.type}
+                      className={cn(
+                        editableInput,
+                        "w-full cursor-pointer appearance-none pr-10",
+                      )}
+                    >
+                      <option value="ONLINE">Online Store</option>
+                      <option value="OFFLINE">Brick & Mortar</option>
+                      <option value="BOTH">Omnichannel</option>
+                    </select>
+                    <ChevronDown
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+                      size={14}
+                    />
+                  </div>
+                </div>
 
-              <div className="md:col-span-2 space-y-1">
-                <label className={labelClasses}>Official Website</label>
-                <div className="relative">
-                  <LinkIcon
-                    size={14}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-                  />
-                  <input
-                    name="website"
-                    defaultValue={retailer.website}
-                    className={cn(editableInput, "pl-12 cursor-text")}
-                  />
+                <div className="md:col-span-2 space-y-1">
+                  <label className={labelClasses}>Official Website</label>
+                  <div className="relative">
+                    <LinkIcon
+                      size={14}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+                    <input
+                      name="website"
+                      defaultValue={retailer.website}
+                      className={cn(editableInput, "pl-12 cursor-text")}
+                    />
+                  </div>
+                </div>
+
+                <div className="md:col-span-1 space-y-1">
+                  <label className={labelClasses}>PIN / Zip Code</label>
+                  <div className="relative">
+                    {!locationValues.city && (
+                      <Lock
+                        size={12}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                      />
+                    )}
+                    <input
+                      name="pinCode"
+                      defaultValue={retailer.pinCode}
+                      placeholder={
+                        locationValues.city ? "Zip Code" : "Select city..."
+                      }
+                      disabled={!locationValues.city}
+                      className={cn(
+                        editableInput,
+                        !locationValues.city &&
+                          "pl-10 opacity-50 cursor-not-allowed",
+                      )}
+                    />
+                  </div>
+                </div>
+
+                <div className="md:col-span-4 space-y-1">
+                  <label className={labelClasses}>
+                    Full Operational Address
+                  </label>
+                  <div className="relative">
+                    <MapPin
+                      size={14}
+                      className="absolute left-4 top-4 text-slate-400"
+                    />
+                    <textarea
+                      name="address"
+                      defaultValue={retailer.address}
+                      rows={2}
+                      className={cn(
+                        editableInput,
+                        "pl-12 resize-none h-auto py-4",
+                      )}
+                    />
+                  </div>
                 </div>
               </div>
-
-              <div className="md:col-span-1 space-y-1">
-                <label className={labelClasses}>PIN / Zip Code</label>
-                <div className="relative">
-                  <Lock
-                    size={12}
-                    className={cn(
-                      "absolute left-4 top-1/2 -translate-y-1/2 text-slate-400",
-                      locationValues.city && "hidden",
-                    )}
-                  />
-                  <input
-                    name="pinCode"
-                    defaultValue={retailer.pinCode}
-                    placeholder={
-                      locationValues.city ? "Zip Code" : "Select city..."
-                    }
-                    disabled={!locationValues.city}
-                    className={cn(
-                      editableInput,
-                      !locationValues.city &&
-                        "pl-10 opacity-50 cursor-not-allowed",
-                    )}
-                  />
-                </div>
-              </div>
-
-              <div className="md:col-span-4 space-y-1">
-                <label className={labelClasses}>Full Operational Address</label>
-                <div className="relative">
-                  <MapPin
-                    size={14}
-                    className="absolute left-4 top-4 text-slate-400"
-                  />
-                  <textarea
-                    name="address"
-                    defaultValue={retailer.address}
-                    rows={2}
-                    className={cn(
-                      editableInput,
-                      "pl-12 resize-none h-auto py-4",
-                    )}
-                  />
-                </div>
-              </div>
-            </div>
+            </LocationRoot>
           </section>
 
           {/* SECTION 4: PERMISSIONS */}
@@ -376,9 +400,6 @@ export default function EditRetailerModal({
                 ?.filter((b) => b.status === "ACTIVE")
                 .map((brand: any) => {
                   const isSelected = selectedBrandIds.includes(brand.id);
-                  const flagIso = countryOptions
-                    .find((c) => c.country === brand.country)
-                    ?.iso.toLowerCase();
                   return (
                     <button
                       key={brand.id}
@@ -396,6 +417,7 @@ export default function EditRetailerModal({
                           <img
                             src={brand.logoUrl}
                             className="w-full h-full object-contain p-1"
+                            alt=""
                           />
                         ) : (
                           <span
@@ -442,7 +464,7 @@ export default function EditRetailerModal({
             <button
               type="submit"
               disabled={isSaving}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-blue-600/20 active:scale-95 flex items-center gap-3 disabled:opacity-50"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-10 py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest shadow-xl shadow-blue-600/20 active:scale-95 flex items-center gap-3 disabled:opacity-50 transition-all"
             >
               {isSaving ? (
                 <Loader2 size={14} className="animate-spin" />

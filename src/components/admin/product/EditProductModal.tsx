@@ -1,20 +1,14 @@
 "use client";
 
-import { useRef, useState, useEffect, useMemo } from "react";
-import {
-  X,
-  Calendar,
-  Settings,
-  Loader2,
-  Globe,
-  ChevronDown,
-  Search,
-  Lock,
-} from "lucide-react";
+import { useRef, useState, useEffect } from "react";
+import { X, Calendar, Settings, Loader2, Lock } from "lucide-react";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { cn } from "@/lib/utils";
-import { countryOptions, CountryOption } from "@/components/common/countries";
 import ProductStatusToggle from "./ProductStatusToggle";
+// 🌍 Import the professional Composable Location Components
+import LocationRoot, {
+  CountryField,
+} from "@/components/common/Form/LocationSelector";
 
 interface EditProductModalProps {
   isOpen: boolean;
@@ -30,8 +24,8 @@ export default function EditProductModal({
   product,
 }: EditProductModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
-  const countryDropdownRef = useRef<HTMLDivElement>(null);
 
+  // States for interactive fields
   const [status, setStatus] = useState<"ACTIVE" | "INACTIVE" | "DISCONTINUED">(
     "ACTIVE",
   );
@@ -39,35 +33,30 @@ export default function EditProductModal({
   const [category, setCategory] = useState("");
   const [warranty, setWarranty] = useState("1");
   const [isSaving, setIsSaving] = useState(false);
-  const [selectedCountry, setSelectedCountry] = useState<CountryOption | null>(
-    null,
-  );
-  const [isCountryOpen, setIsCountryOpen] = useState(false);
-  const [countrySearch, setCountrySearch] = useState("");
 
+  // 🌍 Location Selector State
+  const [locationValues, setLocationValues] = useState({
+    country: "",
+  });
+
+  const handleLocationChange = (field: string, value: string) => {
+    setLocationValues((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Sync Data when modal opens
   useEffect(() => {
     if (product && isOpen) {
       setStatus(product.status || "ACTIVE");
       setCurrency(product.currency || "USD");
       setCategory(product.category || "");
       setWarranty(product.warrantyPeriod || "1");
-
-      if (product.manufactureCountry) {
-        const found = countryOptions.find(
-          (c) => c.country === product.manufactureCountry,
-        );
-        if (found) setSelectedCountry(found);
-      }
+      setLocationValues({
+        country: product.manufactureCountry || "",
+      });
     }
   }, [product, isOpen]);
 
-  const filteredCountries = useMemo(() => {
-    const q = countrySearch.toLowerCase();
-    return countryOptions.filter((c) => c.country.toLowerCase().includes(q));
-  }, [countrySearch]);
-
   useClickOutside(modalRef, onClose);
-  useClickOutside(countryDropdownRef, () => setIsCountryOpen(false));
 
   if (!isOpen || !product) return null;
 
@@ -78,9 +67,9 @@ export default function EditProductModal({
     "text-[10px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight";
 
   const inputClasses =
-    "w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-gray-800 border-none text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 ring-blue-600/20 transition-all placeholder:text-slate-400";
+    "w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-gray-800 border-none text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 ring-blue-600/20 transition-all placeholder:text-slate-400 min-h-[46px]";
   const lockedClasses =
-    "w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-gray-800/40 border border-slate-100 dark:border-gray-800 text-xs font-bold text-slate-500 flex items-center gap-3 italic cursor-not-allowed";
+    "w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-gray-800/40 border border-slate-100 dark:border-gray-800 text-xs font-bold text-slate-500 flex items-center gap-3 italic cursor-not-allowed min-h-[46px]";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,8 +88,7 @@ export default function EditProductModal({
       warrantyPeriod: finalWarranty,
       status,
       currency,
-      manufactureCountry:
-        selectedCountry?.country || product.manufactureCountry,
+      manufactureCountry: locationValues.country,
     };
 
     delete finalData.customCategory;
@@ -190,28 +178,19 @@ export default function EditProductModal({
 
             <div className="space-y-1">
               <label className={labelClasses}>Category *</label>
-              <div className="relative">
-                <select
-                  name="category"
-                  required
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className={cn(
-                    inputClasses,
-                    "appearance-none cursor-pointer pr-10",
-                  )}
-                >
-                  <option value="Headphones / Audio">Headphones / Audio</option>
-                  <option value="Smartphone">Smartphone</option>
-                  <option value="Laptop">Laptop</option>
-                  <option value="Smart TV">Smart TV</option>
-                  <option value="Other">Other</option>
-                </select>
-                <ChevronDown
-                  size={14}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                />
-              </div>
+              <select
+                name="category"
+                required
+                value={category}
+                onChange={(e) => setCategory(e.target.value)}
+                className={cn(inputClasses, "appearance-none cursor-pointer")}
+              >
+                <option value="Headphones / Audio">Headphones / Audio</option>
+                <option value="Smartphone">Smartphone</option>
+                <option value="Laptop">Laptop</option>
+                <option value="Smart TV">Smart TV</option>
+                <option value="Other">Other</option>
+              </select>
               {category === "Other" && (
                 <input
                   name="customCategory"
@@ -233,26 +212,17 @@ export default function EditProductModal({
 
             <div className="space-y-1">
               <label className={labelClasses}>Warranty period (years) *</label>
-              <div className="relative">
-                <select
-                  name="warrantyPeriod"
-                  value={warranty}
-                  onChange={(e) => setWarranty(e.target.value)}
-                  className={cn(
-                    inputClasses,
-                    "appearance-none cursor-pointer pr-10",
-                  )}
-                >
-                  <option value="1">1 Year</option>
-                  <option value="2">2 Years</option>
-                  <option value="3">3 Years</option>
-                  <option value="Other">Other</option>
-                </select>
-                <ChevronDown
-                  size={14}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                />
-              </div>
+              <select
+                name="warrantyPeriod"
+                value={warranty}
+                onChange={(e) => setWarranty(e.target.value)}
+                className={cn(inputClasses, "appearance-none cursor-pointer")}
+              >
+                <option value="1">1 Year</option>
+                <option value="2">2 Years</option>
+                <option value="3">3 Years</option>
+                <option value="Other">Other</option>
+              </select>
             </div>
 
             <div className="space-y-1">
@@ -318,78 +288,16 @@ export default function EditProductModal({
               </div>
             </div>
 
-            {/* Country Selector - Aligned with Row 4 */}
-            <div className="space-y-1 relative" ref={countryDropdownRef}>
-              <label className={labelClasses}>Country of manufacture</label>
-              <div
-                onClick={() => setIsCountryOpen(!isCountryOpen)}
-                className={cn(
-                  inputClasses,
-                  "flex items-center justify-between cursor-pointer",
-                )}
-              >
-                <div className="flex items-center gap-2 truncate">
-                  {selectedCountry ? (
-                    <img
-                      src={`https://flagcdn.com/w40/${selectedCountry.iso}.png`}
-                      className="w-4 h-2.5 object-cover rounded-sm"
-                      alt=""
-                    />
-                  ) : (
-                    <Globe size={14} className="text-slate-400" />
-                  )}
-                  <span className={cn(!selectedCountry && "text-slate-400")}>
-                    {selectedCountry?.country || "Select country"}
-                  </span>
-                </div>
-                <ChevronDown
-                  size={14}
-                  className={cn(
-                    "text-slate-400 transition-transform",
-                    isCountryOpen && "rotate-180",
-                  )}
-                />
-              </div>
-              {isCountryOpen && (
-                <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-white dark:bg-gray-950 border border-slate-100 dark:border-gray-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in zoom-in-95 duration-200">
-                  <div className="p-2 border-b border-slate-50 dark:border-gray-800">
-                    <div className="relative">
-                      <Search
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        size={12}
-                      />
-                      <input
-                        autoFocus
-                        placeholder="Search..."
-                        className="w-full bg-slate-50 dark:bg-gray-800/50 border-none rounded-lg py-2 pl-9 pr-4 text-[10px] font-bold outline-none"
-                        value={countrySearch}
-                        onChange={(e) => setCountrySearch(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto p-1 custom-scrollbar">
-                    {filteredCountries.map((c) => (
-                      <button
-                        key={c.iso}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCountry(c);
-                          setIsCountryOpen(false);
-                        }}
-                        className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 dark:hover:bg-gray-800 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors"
-                      >
-                        <img
-                          src={`https://flagcdn.com/w40/${c.iso}.png`}
-                          className="w-4 h-2.5 object-cover rounded-sm"
-                          alt=""
-                        />
-                        {c.country}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* 🌍 Composable Country Selector - Perfectly Aligned */}
+            <LocationRoot
+              values={locationValues}
+              onChange={handleLocationChange}
+            >
+              <CountryField
+                label="Country of manufacture"
+                className="md:col-span-1"
+              />
+            </LocationRoot>
 
             <div className="space-y-1">
               <label className={labelClasses}>HSN code (India)</label>

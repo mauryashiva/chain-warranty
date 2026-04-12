@@ -1,19 +1,14 @@
 "use client";
 
-import { useRef, useState, useMemo } from "react";
-import {
-  X,
-  Calendar,
-  Settings,
-  Loader2,
-  Globe,
-  ChevronDown,
-  Search,
-} from "lucide-react";
+import { useRef, useState } from "react";
+import { X, Calendar, Settings, Loader2 } from "lucide-react";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { cn } from "@/lib/utils";
-import { countryOptions, CountryOption } from "@/components/common/countries";
 import BrandSelect from "@/components/common/Form/BrandSelect";
+// 🌍 Import the professional Composable Location Components
+import LocationRoot, {
+  CountryField,
+} from "@/components/common/Form/LocationSelector";
 
 interface AddProductModalProps {
   isOpen: boolean;
@@ -27,34 +22,32 @@ export default function AddProductModal({
   onSave,
 }: AddProductModalProps) {
   const modalRef = useRef<HTMLDivElement>(null);
-  const countryDropdownRef = useRef<HTMLDivElement>(null);
   const [isSaving, setIsSaving] = useState(false);
 
-  // States
+  // States for interactive fields
   const [selectedBrandId, setSelectedBrandId] = useState("");
   const [currency, setCurrency] = useState("USD");
   const [category, setCategory] = useState("");
   const [warranty, setWarranty] = useState("1");
-  const [selectedCountry, setSelectedCountry] = useState<CountryOption | null>(
-    null,
-  );
-  const [isCountryOpen, setIsCountryOpen] = useState(false);
-  const [countrySearch, setCountrySearch] = useState("");
 
-  const filteredCountries = useMemo(() => {
-    const q = countrySearch.toLowerCase();
-    return countryOptions.filter((c) => c.country.toLowerCase().includes(q));
-  }, [countrySearch]);
+  // 🌍 Location Selector State
+  const [locationValues, setLocationValues] = useState({
+    country: "",
+  });
+
+  const handleLocationChange = (field: string, value: string) => {
+    setLocationValues((prev) => ({ ...prev, [field]: value }));
+  };
 
   useClickOutside(modalRef, onClose);
-  useClickOutside(countryDropdownRef, () => setIsCountryOpen(false));
 
   if (!isOpen) return null;
 
   const labelClasses =
     "text-[10px] font-black uppercase tracking-[0.15em] text-slate-800 dark:text-slate-200 mb-2 block ml-1";
+
   const inputClasses =
-    "w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-gray-800 border-none text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 ring-blue-600/20 transition-all placeholder:text-slate-400";
+    "w-full px-4 py-3 rounded-xl bg-slate-100 dark:bg-gray-800 border-none text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 ring-blue-600/20 transition-all placeholder:text-slate-400 min-h-[46px]";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,7 +65,8 @@ export default function AddProductModal({
     data.brandId = selectedBrandId;
     data.currency = currency;
     data.status = "ACTIVE";
-    data.manufactureCountry = selectedCountry?.country || "";
+    // 🌍 Assign country from LocationSelector state
+    data.manufactureCountry = locationValues.country;
 
     delete data.customCategory;
     delete data.customWarranty;
@@ -94,7 +88,7 @@ export default function AddProductModal({
         {/* Header */}
         <div className="px-8 py-6 border-b border-slate-100 dark:border-gray-800 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white uppercase">
+            <h2 className="text-xl font-black tracking-tighter text-slate-900 dark:text-white uppercase leading-none">
               Add New Product Model
             </h2>
             <p className="text-[11px] font-bold text-slate-500 mt-1">
@@ -175,6 +169,7 @@ export default function AddProductModal({
                   name="customCategory"
                   placeholder="Type category..."
                   required
+                  autoFocus
                   className={cn(inputClasses, "mt-2")}
                 />
               )}
@@ -261,84 +256,16 @@ export default function AddProductModal({
               </div>
             </div>
 
-            <div className="space-y-1 relative" ref={countryDropdownRef}>
-              <label className={labelClasses}>Country of manufacture</label>
-              <div
-                onClick={() => setIsCountryOpen(!isCountryOpen)}
-                className={cn(
-                  inputClasses,
-                  "flex items-center justify-between cursor-pointer",
-                )}
-              >
-                <div className="flex items-center gap-2 truncate">
-                  {selectedCountry ? (
-                    <img
-                      src={`https://flagcdn.com/w40/${selectedCountry.iso}.png`}
-                      className="w-4 h-2.5 object-cover rounded-sm"
-                      alt=""
-                    />
-                  ) : (
-                    <Globe size={14} className="text-slate-400" />
-                  )}
-                  <span className={cn(!selectedCountry && "text-slate-400")}>
-                    {selectedCountry?.country || "Select country"}
-                  </span>
-                </div>
-                <ChevronDown
-                  size={14}
-                  className={cn(
-                    "text-slate-400 transition-transform",
-                    isCountryOpen && "rotate-180",
-                  )}
-                />
-              </div>
-
-              {isCountryOpen && (
-                <div className="absolute top-[calc(100%+8px)] left-0 w-full bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-800 rounded-2xl shadow-2xl z-50 overflow-hidden animate-in zoom-in-95 duration-200">
-                  <div className="p-2 border-b border-slate-50 dark:border-gray-800">
-                    <div className="relative">
-                      <Search
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        size={12}
-                      />
-                      <input
-                        autoFocus
-                        placeholder="Search..."
-                        className="w-full bg-slate-50 dark:bg-gray-800/50 border-none rounded-lg py-2 pl-9 pr-4 text-[10px] font-bold outline-none"
-                        value={countrySearch}
-                        onChange={(e) => setCountrySearch(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="max-h-48 overflow-y-auto p-1 custom-scrollbar">
-                    {filteredCountries.map((c) => (
-                      <button
-                        key={c.iso}
-                        type="button"
-                        onClick={() => {
-                          setSelectedCountry(c);
-                          setIsCountryOpen(false);
-                          setCountrySearch("");
-                        }}
-                        className={cn(
-                          "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left text-[10px] font-bold",
-                          selectedCountry?.iso === c.iso
-                            ? "bg-blue-50 text-blue-600"
-                            : "hover:bg-slate-50",
-                        )}
-                      >
-                        <img
-                          src={`https://flagcdn.com/w40/${c.iso}.png`}
-                          className="w-4 h-2.5 object-cover rounded-sm"
-                          alt=""
-                        />
-                        {c.country}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            {/* 🌍 Advanced Composable Location Selector */}
+            <LocationRoot
+              values={locationValues}
+              onChange={handleLocationChange}
+            >
+              <CountryField
+                label="Country of manufacture"
+                className="md:col-span-1"
+              />
+            </LocationRoot>
 
             <div className="space-y-1">
               <label className={labelClasses}>HSN code (India)</label>
@@ -349,7 +276,7 @@ export default function AddProductModal({
               />
             </div>
 
-            {/* Row 5 - Spanning 2 columns for a cleaner look */}
+            {/* Row 5 */}
             <div className="md:col-span-2 space-y-1">
               <label className={labelClasses}>
                 Available colors / variants
@@ -383,7 +310,7 @@ export default function AddProductModal({
                 name="description"
                 rows={2}
                 placeholder="Short description..."
-                className={cn(inputClasses, "resize-none")}
+                className={cn(inputClasses, "resize-none h-auto")}
               />
             </div>
 

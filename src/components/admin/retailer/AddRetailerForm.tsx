@@ -23,11 +23,17 @@ import { cn } from "@/lib/utils";
 import { countryOptions } from "@/components/common/countries";
 import { useAdminBrands } from "@/hooks/admin/use-admin-brands";
 import { useClickOutside } from "@/hooks/use-click-outside";
-import LocationSelector from "@/components/common/Form/LocationSelector";
+// 🌍 Import Advanced Composable Components
+import LocationRoot, {
+  CountryField,
+  PhoneField,
+  StateField,
+  CityField,
+} from "@/components/common/Form/LocationSelector";
 
 interface AddRetailerFormProps {
   onSave: (data: any) => Promise<void>;
-  onClose: () => void; // Prop to handle cutting/closing the form
+  onClose: () => void;
 }
 
 export default function AddRetailerForm({
@@ -37,7 +43,6 @@ export default function AddRetailerForm({
   const [isSaving, setIsSaving] = useState(false);
   const formRef = useRef<HTMLDivElement>(null);
 
-  // 🖱️ Click Outside Logic
   useClickOutside(formRef, () => {
     onClose();
   });
@@ -45,10 +50,11 @@ export default function AddRetailerForm({
   const { brands, isLoading: isLoadingBrands } = useAdminBrands();
   const [selectedBrandIds, setSelectedBrandIds] = useState<string[]>([]);
 
+  // 🌍 Composable Location State
   const [locationValues, setLocationValues] = useState({
     phoneCode: "+91",
     phoneNumber: "",
-    country: "India",
+    country: "",
     state: "",
     city: "",
   });
@@ -87,7 +93,7 @@ export default function AddRetailerForm({
       setLocationValues({
         phoneCode: "+91",
         phoneNumber: "",
-        country: "India",
+        country: "",
         state: "",
         city: "",
       });
@@ -100,7 +106,7 @@ export default function AddRetailerForm({
   const labelClasses =
     "text-[10px] font-black uppercase tracking-[0.2em] text-slate-800 dark:text-slate-200 mb-2 block ml-1";
   const inputClasses =
-    "w-full px-4 py-3.5 rounded-xl bg-slate-100 dark:bg-gray-800 border-none text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 ring-blue-600/20 transition-all appearance-none flex items-center justify-between";
+    "w-full px-4 py-3.5 rounded-xl bg-slate-100 dark:bg-gray-800 border-none text-xs font-bold text-slate-900 dark:text-white outline-none focus:ring-2 ring-blue-600/20 transition-all min-h-[46px]";
   const sectionHeaderClasses =
     "flex items-center gap-2 mb-6 pb-2 border-b border-slate-100 dark:border-gray-800";
   const sectionTitleClasses =
@@ -111,7 +117,6 @@ export default function AddRetailerForm({
       ref={formRef}
       className="bg-white dark:bg-gray-900 border border-slate-100 dark:border-gray-800 rounded-[3rem] p-10 shadow-2xl relative max-w-6xl mx-auto"
     >
-      {/* Manual Close Button (Top Right) */}
       <button
         onClick={onClose}
         className="absolute top-8 right-8 p-2 rounded-full hover:bg-slate-100 dark:hover:bg-gray-800 text-slate-400 transition-colors"
@@ -119,7 +124,6 @@ export default function AddRetailerForm({
         <X size={20} />
       </button>
 
-      {/* Main Header */}
       <div className="flex items-center gap-4 mb-12">
         <div className="p-3 rounded-2xl bg-blue-600 text-white shadow-lg shadow-blue-600/20">
           <Store size={24} />
@@ -157,7 +161,10 @@ export default function AddRetailerForm({
               <div className="relative">
                 <select
                   name="type"
-                  className={cn(inputClasses, "cursor-pointer")}
+                  className={cn(
+                    inputClasses,
+                    "appearance-none cursor-pointer pr-10",
+                  )}
                 >
                   <option value="ONLINE">Online</option>
                   <option value="OFFLINE">Offline</option>
@@ -195,60 +202,64 @@ export default function AddRetailerForm({
             <Globe size={14} className="text-blue-600" />
             <h3 className={sectionTitleClasses}>Location & Presence</h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
-            <div className="lg:col-span-4">
-              <LocationSelector
-                fields={["phone", "country", "state", "city"]}
-                values={locationValues}
-                onChange={handleLocationChange}
-              />
-            </div>
 
-            <div className="space-y-1">
-              <label className={labelClasses}>PIN / Zip Code</label>
-              <div className="relative">
-                {!locationValues.city && (
-                  <Lock
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10"
-                    size={14}
+          <LocationRoot values={locationValues} onChange={handleLocationChange}>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-x-6 gap-y-6">
+              {/* Individual Fields now sit directly in the parent grid */}
+              <PhoneField label="Contact Phone" className="md:col-span-1" />
+
+              <CountryField label="Country" className="md:col-span-1" />
+
+              <StateField label="State / Province" className="md:col-span-1" />
+
+              <CityField label="City" className="md:col-span-1" />
+
+              <div className="space-y-1">
+                <label className={labelClasses}>PIN / Zip Code</label>
+                <div className="relative">
+                  {!locationValues.city && (
+                    <Lock
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 z-10"
+                      size={14}
+                    />
+                  )}
+                  <input
+                    name="pinCode"
+                    placeholder={
+                      locationValues.city ? "e.g. 400001" : "Select city first"
+                    }
+                    disabled={!locationValues.city}
+                    className={cn(
+                      inputClasses,
+                      "cursor-text",
+                      !locationValues.city &&
+                        "pl-10 opacity-50 cursor-not-allowed grayscale",
+                    )}
                   />
-                )}
-                <input
-                  name="pinCode"
-                  placeholder={
-                    locationValues.city ? "e.g. 400001" : "Select city first"
-                  }
-                  disabled={!locationValues.city}
-                  className={cn(
-                    inputClasses,
-                    "cursor-text",
-                    !locationValues.city &&
-                      "pl-10 opacity-50 cursor-not-allowed grayscale",
-                  )}
-                />
+                </div>
               </div>
-            </div>
 
-            <div className="lg:col-span-3 space-y-1">
-              <label className={labelClasses}>Detailed Address *</label>
-              <div className="relative">
-                <MapPin
-                  className="absolute left-4 top-4 text-slate-400"
-                  size={16}
-                />
-                <textarea
-                  name="address"
-                  required
-                  rows={1}
-                  placeholder="Street, Building, Area info..."
-                  className={cn(
-                    inputClasses,
-                    "pl-12 pt-3.5 h-13 resize-none cursor-text",
-                  )}
-                />
+              <div className="lg:col-span-3 space-y-1">
+                <label className={labelClasses}>Detailed Address *</label>
+                <div className="relative">
+                  <MapPin
+                    className="absolute left-4 top-4 text-slate-400"
+                    size={16}
+                  />
+                  <textarea
+                    name="address"
+                    required
+                    rows={1}
+                    placeholder="Street, Building, Area info..."
+                    className={cn(
+                      inputClasses,
+                      "pl-12 pt-3.5 h-11.5 resize-none cursor-text",
+                    )}
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          </LocationRoot>
         </section>
 
         {/* SECTION 3: BUSINESS & TAX */}
@@ -351,10 +362,6 @@ export default function AddRetailerForm({
                 ?.filter((b: any) => b.status === "ACTIVE")
                 .map((brand: any) => {
                   const isSelected = selectedBrandIds.includes(brand.id);
-                  const flagIso = countryOptions
-                    .find((c) => c.country === brand.country)
-                    ?.iso.toLowerCase();
-
                   return (
                     <button
                       key={brand.id}
@@ -386,13 +393,6 @@ export default function AddRetailerForm({
                             brand.name[0]
                           )}
                         </div>
-                        {flagIso && (
-                          <img
-                            src={`https://flagcdn.com/w20/${flagIso}.png`}
-                            className="absolute -bottom-1 -right-1 w-4 h-3 border border-white dark:border-gray-900 rounded-sm shadow-sm z-10"
-                            alt=""
-                          />
-                        )}
                       </div>
                       <span
                         className={cn(
@@ -417,7 +417,6 @@ export default function AddRetailerForm({
           </div>
         </section>
 
-        {/* SUBMIT */}
         <div className="pt-6 border-t border-slate-50 dark:border-gray-800">
           <button
             type="submit"
