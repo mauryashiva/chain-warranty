@@ -4,7 +4,6 @@ import { SerialStatus } from "@prisma/client";
 export const SerialController = {
   /**
    * 📊 Get Serial Stats for the Dashboard Cards
-   * Standardized to match the Uppercase Enums in your schema
    */
   async getSerialStats() {
     const [total, registered, unregistered, flagged, blocked] =
@@ -17,10 +16,9 @@ export const SerialController = {
           where: { status: "UNREGISTERED", isDeleted: false },
         }),
         prisma.serial.count({ where: { status: "FLAGGED", isDeleted: false } }),
-        prisma.serial.count({ where: { status: "BLOCKED", isDeleted: false } }), // 👈 Add this
+        prisma.serial.count({ where: { status: "BLOCKED", isDeleted: false } }),
       ]);
 
-    // Formatting helper for UI (e.g., 9200 -> 9.2k)
     const formatValue = (val: number) =>
       val >= 1000 ? `${(val / 1000).toFixed(1)}k` : val.toString();
 
@@ -29,7 +27,7 @@ export const SerialController = {
       registered: formatValue(registered),
       unregistered: formatValue(unregistered),
       flagged: formatValue(flagged),
-      blocked: formatValue(blocked), // 👈 Return this
+      blocked: formatValue(blocked),
     };
   },
 
@@ -43,7 +41,7 @@ export const SerialController = {
         product: {
           include: { brand: { select: { name: true } } },
         },
-        retailer: { select: { name: true } },
+        retailer: { select: { id: true, name: true } }, // Include ID for select matching
       },
       orderBy: { createdAt: "desc" },
       take: limit,
@@ -63,7 +61,7 @@ export const SerialController = {
           include: { brand: true },
         },
         retailer: true,
-        warranty: true, // This works because of the 1:1 relation we fixed
+        warranty: true,
       },
     });
 
@@ -75,8 +73,41 @@ export const SerialController = {
   },
 
   /**
+   * 🔄 Update existing Serial Record
+   * Standardizes logistics and status updates
+   */
+  async updateSerial(id: string, data: any) {
+    const existing = await prisma.serial.findUnique({
+      where: { id },
+    });
+
+    if (!existing) {
+      throw new Error("Registry Error: Serial record not found.");
+    }
+
+    // Safety: Hardware identity (serialNumber, productId, batchId) is omitted
+    // to prevent tampering with physical manufacturing records.
+    return await prisma.serial.update({
+      where: { id },
+      data: {
+        retailerId: data.retailerId || null,
+        dispatchDate: data.dispatchDate ? new Date(data.dispatchDate) : null,
+        // Normalize status to UPPERCASE to match Prisma Enum
+        status: data.status
+          ? (data.status.toUpperCase() as SerialStatus)
+          : undefined,
+      },
+      include: {
+        product: {
+          include: { brand: { select: { name: true } } },
+        },
+        retailer: { select: { name: true } },
+      },
+    });
+  },
+
+  /**
    * 🏗️ Create/Bulk Upload Serials
-   * Handles uppercase normalization and date conversion
    */
   async createSerials(data: {
     serials: string[];
@@ -92,12 +123,10 @@ export const SerialController = {
       duplicates: [] as string[],
     };
 
-    // Use a loop to handle individual error catching per serial
     for (const sn of data.serials) {
       try {
         const cleanSN = sn.trim().toUpperCase();
 
-        // 1. Check for existing to prevent P2002 Unique constraint errors
         const existing = await prisma.serial.findUnique({
           where: { serialNumber: cleanSN },
         });
@@ -108,7 +137,6 @@ export const SerialController = {
           continue;
         }
 
-        // 2. Create the Serial entry
         await prisma.serial.create({
           data: {
             serialNumber: cleanSN,
@@ -121,7 +149,7 @@ export const SerialController = {
             dispatchDate: data.dispatchDate
               ? new Date(data.dispatchDate)
               : null,
-            status: "UNREGISTERED", // Fixed: Must be Uppercase to match Enum
+            status: "UNREGISTERED",
           },
         });
 

@@ -8,14 +8,16 @@ export interface Serial {
   id: string;
   serialNumber: string;
   batchId?: string;
-  status: "UNREGISTERED" | "REGISTERED" | "FLAGGED" | "BLOCKED"; // Added BLOCKED
+  status: "UNREGISTERED" | "REGISTERED" | "FLAGGED" | "BLOCKED";
   manufactureDate?: string;
   dispatchDate?: string;
   product?: {
     name: string;
+    sku: string; // Added sku for better UI display
     brand: { name: string };
   };
   retailer?: {
+    id: string; // Added id for select matching
     name: string;
   };
   warrantyId?: string;
@@ -29,7 +31,7 @@ export interface SerialStats {
   registered: string | number;
   unregistered: string | number;
   flagged: string | number;
-  blocked: string | number; // Added this
+  blocked: string | number;
 }
 
 export function useAdminSerials() {
@@ -59,7 +61,26 @@ export function useAdminSerials() {
     }
   }, []);
 
-  // --- 2. Validate Single Serial (Search Bar) ---
+  // --- 2. Update Single Serial ---
+  const updateSerial = async (id: string, data: Partial<Serial>) => {
+    try {
+      setError(null);
+      const result = await adminApiFetch<Serial>(`/serials?id=${id}`, {
+        method: "PATCH",
+        body: JSON.stringify(data),
+      });
+
+      // Refresh data to update table and stats immediately
+      await fetchData();
+      return result;
+    } catch (err: any) {
+      const msg = err.message || "Failed to update serial record.";
+      setError(msg);
+      throw new Error(msg);
+    }
+  };
+
+  // --- 3. Validate Single Serial (Search Bar) ---
   const validateSerial = async (query: string) => {
     if (!query) return null;
     try {
@@ -74,7 +95,7 @@ export function useAdminSerials() {
     }
   };
 
-  // --- 3. Bulk Upload ---
+  // --- 4. Bulk Upload ---
   const uploadSerials = async (payload: {
     serials: string[];
     productId: string;
@@ -106,6 +127,7 @@ export function useAdminSerials() {
     loading,
     error,
     refresh: fetchData,
+    updateSerial, // ✅ Now exported to fix the "is not a function" error
     validateSerial,
     uploadSerials,
   };

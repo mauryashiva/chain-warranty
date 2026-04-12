@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, ChangeEvent, DragEvent, useMemo } from "react";
+import { useRef, useState, ChangeEvent, DragEvent } from "react";
 import {
   Upload,
   Info,
@@ -20,8 +20,9 @@ import { useAdminRetailers } from "@/hooks/admin/use-admin-retailers";
 import { useClickOutside } from "@/hooks/use-click-outside";
 import { cn } from "@/lib/utils";
 import Papa from "papaparse";
-// 🏷️ Import the new premium BrandSelect
+// 🏷️ Import premium Select components
 import BrandSelect from "@/components/common/Form/BrandSelect";
+import ProductSelect from "@/components/common/Form/ProductSelect";
 
 interface BulkUploadSerialsModalProps {
   isOpen: boolean;
@@ -192,32 +193,13 @@ export default function BulkUploadSerialsModal({
 
             <div className="space-y-1">
               <label className={labelClasses}>Product / SKU *</label>
-              <div className="relative group">
-                <Package
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors"
-                  size={16}
-                />
-                <select
-                  className={cn(inputClasses, "pl-12 cursor-pointer")}
-                  value={selectedProduct}
-                  onChange={(e) => setSelectedProduct(e.target.value)}
-                >
-                  <option value="">Select product</option>
-                  {products
-                    ?.filter(
-                      (p: any) => !selectedBrand || p.brandId === selectedBrand,
-                    )
-                    .map((p: any) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name} ({p.sku})
-                      </option>
-                    ))}
-                </select>
-                <ChevronDown
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                  size={16}
-                />
-              </div>
+              {/* 🏷️ Using premium searchable ProductSelect */}
+              <ProductSelect
+                value={selectedProduct}
+                onChange={setSelectedProduct}
+                brandId={selectedBrand}
+                disabled={!selectedBrand}
+              />
             </div>
 
             <div className="space-y-1">

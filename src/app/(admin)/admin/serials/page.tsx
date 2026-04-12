@@ -5,19 +5,22 @@ import {
   Plus,
   Search,
   FileSpreadsheet,
-  MoreHorizontal,
   Loader2,
   CheckCircle2,
   ShieldAlert,
   BarChart3,
-  Ban, // Icon for Blocked
+  Ban,
+  Settings2, // More premium icon for Edit
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import BulkUploadSerialsModal from "@/components/admin/serial/BulkUploadSerials";
+import EditSerialModal from "@/components/admin/serial/EditSerialModal";
 import { useAdminSerials } from "@/hooks/admin/use-admin-serials";
 
 export default function AdminSerialsPage() {
   const [isBulkOpen, setIsBulkOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [selectedSerial, setSelectedSerial] = useState<any>(null);
   const [validateQuery, setValidateQuery] = useState("");
 
   const {
@@ -31,14 +34,44 @@ export default function AdminSerialsPage() {
       blocked: "0",
     },
     validateSerial,
+    updateSerial, // 🟢 Connect to hook
   } = useAdminSerials();
 
   // Color constants for high-end feel
   const labelClasses =
     "text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 mb-1";
 
+  const handleEditClick = (serial: any) => {
+    setSelectedSerial(serial);
+    setIsEditOpen(true);
+  };
+
+  const handleUpdate = async (id: string, data: any) => {
+    try {
+      await updateSerial(id, data);
+      setIsEditOpen(false);
+    } catch (error) {
+      console.error("Update failed:", error);
+    }
+  };
+
   return (
     <div className="space-y-10 min-h-screen bg-white dark:bg-gray-900 pb-24 px-6 md:px-10 pt-8">
+      {/* Modals */}
+      <BulkUploadSerialsModal
+        isOpen={isBulkOpen}
+        onClose={() => setIsBulkOpen(false)}
+      />
+
+      {selectedSerial && (
+        <EditSerialModal
+          isOpen={isEditOpen}
+          serial={selectedSerial}
+          onClose={() => setIsEditOpen(false)}
+          onSave={handleUpdate}
+        />
+      )}
+
       {/* Header Area */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-100 dark:border-gray-800 pb-8">
         <div>
@@ -64,7 +97,7 @@ export default function AdminSerialsPage() {
         </div>
       </div>
 
-      {/* Stats Cards - Added Blocked Status */}
+      {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {[
           {
@@ -238,8 +271,16 @@ export default function AdminSerialsPage() {
                         : "—"}
                     </td>
                     <td className="px-8 py-6 text-right">
-                      <button className="bg-slate-100 dark:bg-gray-800 p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all">
-                        <MoreHorizontal size={16} />
+                      {/* Premium Edit Button */}
+                      <button
+                        onClick={() => handleEditClick(serial)}
+                        className="group/btn flex items-center gap-2 ml-auto bg-slate-100 dark:bg-gray-800 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all active:scale-95"
+                      >
+                        <Settings2
+                          size={14}
+                          className="group-hover/btn:rotate-90 transition-transform duration-500"
+                        />
+                        <span>Edit</span>
                       </button>
                     </td>
                   </tr>
@@ -249,11 +290,6 @@ export default function AdminSerialsPage() {
           </table>
         </div>
       </div>
-
-      <BulkUploadSerialsModal
-        isOpen={isBulkOpen}
-        onClose={() => setIsBulkOpen(false)}
-      />
     </div>
   );
 }
