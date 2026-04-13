@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Plus, Search, Loader2, ChevronDown } from "lucide-react";
+import { Plus, Search, Loader2, ChevronDown, Edit3 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import AddProductModal from "@/components/admin/product/AddProductModal";
 import EditProductModal from "@/components/admin/product/EditProductModal";
@@ -95,10 +95,10 @@ export default function AdminProductsPage() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase leading-none">
             Products
           </h1>
-          <p className="text-[10px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight mt-1">
+          <p className="text-[10px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight mt-2">
             All product models eligible for warranty registration
           </p>
         </div>
@@ -126,7 +126,6 @@ export default function AdminProductsPage() {
         </div>
 
         <div className="flex items-center gap-6">
-          {/* Brand Filter */}
           <div className="relative flex items-center">
             <select
               className={selectClasses}
@@ -146,7 +145,6 @@ export default function AdminProductsPage() {
             />
           </div>
 
-          {/* Category Filter */}
           <div className="relative flex items-center border border-slate-900 dark:border-white rounded-sm px-3 py-1">
             <select
               className={selectClasses}
@@ -166,7 +164,6 @@ export default function AdminProductsPage() {
             />
           </div>
 
-          {/* Status Filter */}
           <div className="relative flex items-center">
             <select
               className={selectClasses}
@@ -242,16 +239,16 @@ export default function AdminProductsPage() {
               filteredProducts.map((p: any) => (
                 <tr
                   key={p.id}
-                  className="border-b border-slate-50 dark:border-gray-900 hover:bg-slate-50 dark:hover:bg-gray-900/40 transition-colors group"
+                  className="border-b border-slate-50 dark:border-gray-900 hover:bg-slate-50/50 dark:hover:bg-gray-900/40 transition-colors group"
                 >
                   <td className="px-4 py-6">
                     <div className="flex flex-col">
-                      <span className="text-[11px] font-black uppercase tracking-tight leading-none group-hover:text-blue-600 transition-colors">
-                        {p.name}
-                      </span>
-                      <span className="text-[9px] font-bold text-slate-500 uppercase mt-1.5 tabular-nums">
+                      <span className="text-[8px] font-black text-slate-400 uppercase tracking-[0.15em] mb-1 tabular-nums">
                         {p.modelNumber}
                       </span>
+                      <h3 className="text-[11px] font-black uppercase tracking-tight leading-none group-hover:text-blue-600 transition-colors">
+                        {p.name}
+                      </h3>
                     </div>
                   </td>
                   <td className="px-4 py-6 text-[11px] font-bold uppercase">
@@ -289,18 +286,16 @@ export default function AdminProductsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-6 text-right">
-                    <div className="flex items-center justify-end gap-4">
+                    <div className="flex items-center justify-end gap-3">
                       <button
                         onClick={() => {
                           setSelectedProduct(p);
                           setIsEditModalOpen(true);
                         }}
-                        className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-100 dark:border-gray-800 text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-400 hover:bg-slate-900 dark:hover:bg-white hover:text-white dark:hover:text-slate-950 transition-all active:scale-95 shadow-sm"
                       >
+                        <Edit3 size={10} strokeWidth={3} />
                         Edit
-                      </button>
-                      <button className="text-[10px] font-black uppercase text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
-                        Serials
                       </button>
                     </div>
                   </td>
