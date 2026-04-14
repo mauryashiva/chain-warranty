@@ -18,13 +18,18 @@ export const endpoints = {
 
   // 👑 Admin-Facing Endpoints (/api/admin/...)
   admin: {
-    brands: "/brands", // ✅ Added for Brand Management
-    products: "/products", // ✅ Added for Product Catalog
-    serials: "/serials", // ✅ Added for Serial Number Validation
-    retailers: "/retailers", // ✅ Added for Retailer Management
+    // 📊 System Overview
+    dashboard: {
+      stats: "/dashboard/stats", // ✅ Added to solve Property 'dashboard' error
+    },
+
+    brands: "/brands",
+    products: "/products",
+    serials: "/serials",
+    retailers: "/retailers",
     warrantyRules: "/warranty-rules",
-    audit: "/audit", // ✅ Added for System Audit Logs
-    claims: "/claims", // ✅ Added for Admin Claim Review
-    users: "/users", // ✅ Added for Admin Role Management
+    audit: "/audit",
+    claims: "/claims",
+    users: "/users",
   },
 };
