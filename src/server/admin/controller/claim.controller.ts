@@ -1,5 +1,5 @@
 import { prisma } from "@/server/db/prisma";
-import { WarrantyRuleController } from "./warranty-rule.controller";
+import { AuditController } from "./audit.controller"; // ✅ Import the Observer
 
 export const ClaimController = {
   /**
@@ -41,7 +41,7 @@ export const ClaimController = {
 
       if (!warranty) throw new Error("Warranty record not found.");
 
-      // 2. Policy Engine Logic (Using the Singleton Config we built)
+      // 2. Policy Engine Logic
       const globalConfig = await tx.globalConfig.findUnique({
         where: { singleton: "global" },
       });
@@ -62,8 +62,7 @@ export const ClaimController = {
         );
       }
 
-      // 4. Basic Fraud Scoring (Industry Standard)
-      // Logic: If claim is filed within 48 hours of registration, flag for review
+      // 4. Basic Fraud Scoring
       const hoursSinceReg =
         (Date.now() - new Date(warranty.createdAt).getTime()) /
         (1000 * 60 * 60);
@@ -102,7 +101,7 @@ export const ClaimController = {
         });
       }
 
-      // 8. Initial Log
+      // 8. Initial Log (Claim History)
       await tx.claimLog.create({
         data: {
           claimId: claim.id,
@@ -126,6 +125,12 @@ export const ClaimController = {
     note: string,
   ) {
     return await prisma.$transaction(async (tx) => {
+      // Fetch current state for Audit "oldValue"
+      const previousClaim = await tx.claim.findUnique({
+        where: { id: claimId },
+      });
+      if (!previousClaim) throw new Error("Claim not found");
+
       const updatedClaim = await tx.claim.update({
         where: { id: claimId },
         data: {
@@ -135,6 +140,7 @@ export const ClaimController = {
         },
       });
 
+      // 1. Internal Claim Log (For customer/claim view)
       await tx.claimLog.create({
         data: {
           claimId,
@@ -142,6 +148,18 @@ export const ClaimController = {
           note,
           changedBy: adminId,
         },
+      });
+
+      // 2. 🛡️ GLOBAL AUDIT LOG (For Admin Compliance)
+      await AuditController.log({
+        adminId,
+        action: "CLAIM_STATUS_CHANGE",
+        entity: "CLAIM",
+        entityId: claimId,
+        entityName: updatedClaim.claimNumber,
+        details: `Status transitioned from ${previousClaim.status} to ${status}. Note: ${note}`,
+        oldValue: previousClaim,
+        newValue: updatedClaim,
       });
 
       return updatedClaim;
