@@ -80,10 +80,10 @@ export default function AdminBrandsPage() {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-slate-100 dark:border-gray-800 pb-8">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
+          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white uppercase">
             Brands
           </h1>
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-tight mt-1">
+          <p className="text-[10px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight mt-2">
             Manage all product brands registered in the system
           </p>
         </div>

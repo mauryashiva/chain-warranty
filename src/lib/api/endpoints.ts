@@ -22,6 +22,7 @@ export const endpoints = {
     products: "/products", // ✅ Added for Product Catalog
     serials: "/serials", // ✅ Added for Serial Number Validation
     retailers: "/retailers", // ✅ Added for Retailer Management
+    warrantyRules: "/warranty-rules",
     audit: "/audit", // ✅ Added for System Audit Logs
     claims: "/claims", // ✅ Added for Admin Claim Review
     users: "/users", // ✅ Added for Admin Role Management

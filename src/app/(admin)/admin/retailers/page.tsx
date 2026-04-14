@@ -58,7 +58,7 @@ export default function AdminRetailersPage() {
           <h3 className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white uppercase leading-none">
             Retailers
           </h3>
-          <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-2 uppercase tracking-[0.2em]">
+          <p className="text-[10px] font-bold text-slate-800 dark:text-slate-200 uppercase tracking-tight mt-2">
             Authorised retailers who can sell and register products
           </p>
         </div>

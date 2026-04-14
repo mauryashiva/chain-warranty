@@ -23,7 +23,7 @@ const NAV_ITEMS = [
   { label: "Products", href: "/admin/products", icon: Box },
   { label: "Serial Numbers", href: "/admin/serials", icon: Hash },
   { label: "Retailers", href: "/admin/retailers", icon: Store },
-  { label: "Warranty Rules", href: "/admin/rules", icon: Settings },
+  { label: "Warranty Rules", href: "/admin/warranty-rules", icon: Settings },
   { label: "Claims Management", href: "/admin/claims", icon: ShieldCheck },
   { label: "Admin Users", href: "/admin/users", icon: UserCircle },
   { label: "Audit Log", href: "/admin/audit", icon: History },

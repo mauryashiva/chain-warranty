@@ -168,6 +168,7 @@ model Product {
   brandId String
   brand   Brand  @relation(fields: [brandId], references: [id])
 
+  warrantyRule   WarrantyRule?
   serials    Serial[]
   warranties Warranty[]
 
@@ -181,6 +182,48 @@ enum ProductStatus {
   ACTIVE
   INACTIVE
   DISCONTINUED
+}
+
+model GlobalConfig {
+  id                             String   @id @default(cuid())
+  // Registration Rules
+  allowRegistrationAfterPurchase Boolean  @default(true)
+  maxDaysToRegister              Int      @default(30)
+  
+  // Transfer Rules
+  allowTransfer                  Boolean  @default(true)
+  allowTransferWithOpenClaim     Boolean  @default(false)
+  requireOtpForTransfer          Boolean  @default(true)
+  requireIdProofForTransfer      Boolean  @default(false)
+  
+  // Lifecycle Rules
+  allowClaimAfterExpiry          Boolean  @default(false)
+  autoExpireNft                  Boolean  @default(true)
+  
+  updatedAt                      DateTime @updatedAt
+}
+
+// 2. Specific Overrides for individual Product Models
+model WarrantyRule {
+  id                String   @id @default(cuid())
+  
+  // Link to the Product
+  productId         String   @unique
+  product           Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  
+  // Coverage Specs
+  defaultPeriod     Int      @default(12) // Months (e.g. 12, 24, 36)
+  extendedPeriod    Int      @default(0)  // Months (Optional addition)
+  
+  // Claim Logic
+  maxClaimsAllowed  Int      @default(3)  // Total claims allowed per lifetime
+  claimCooldownDays Int      @default(30) // Days to wait between two claims
+  
+  // Transfer Logic
+  isTransferable    Boolean  @default(true)
+  
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 }
 
 //////////////////////////////////////////////////////
