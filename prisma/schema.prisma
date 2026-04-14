@@ -171,6 +171,7 @@ model Product {
   warrantyRule   WarrantyRule?
   serials    Serial[]
   warranties Warranty[]
+  claims       Claim[]
 
   @@index([brandId])
   @@index([sku])
@@ -186,6 +187,7 @@ enum ProductStatus {
 
 model GlobalConfig {
   id                             String   @id @default(cuid())
+  singleton String @unique @default("global") // prevents multiple rows
   // Registration Rules
   allowRegistrationAfterPurchase Boolean  @default(true)
   maxDaysToRegister              Int      @default(30)
@@ -201,6 +203,7 @@ model GlobalConfig {
   autoExpireNft                  Boolean  @default(true)
   
   updatedAt                      DateTime @updatedAt
+  
 }
 
 // 2. Specific Overrides for individual Product Models
@@ -322,6 +325,180 @@ enum RetailerStatus {
   SUSPENDED
 }
 
+// ==========================================
+// CLAIMS MANAGEMENT SYSTEM
+// ==========================================
+
+enum ClaimType {
+  REPAIR
+  REPLACEMENT
+  REFUND
+}
+
+enum ClaimStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  RESOLVED
+  CANCELLED
+}
+
+enum ClaimPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model Claim {
+  id              String        @id @default(cuid())
+  claimNumber     String        @unique // e.g. CLM-2024-0001
+
+  // ✅ Core Relations
+  warrantyId      String
+  warranty        Warranty      @relation(fields: [warrantyId], references: [id])
+  
+  productId       String        // Direct link for easier analytics
+  product         Product       @relation(fields: [productId], references: [id])
+
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+
+  // ✅ Claim Details
+  type            ClaimType
+  status          ClaimStatus   @default(PENDING)
+  priority        ClaimPriority @default(MEDIUM)
+  subject         String        // e.g. "Left earbud no sound"
+  description     String        @db.Text
+
+  // ✅ Issue Metadata
+  issueDate        DateTime? 
+  productCondition String?   // Physical state of item
+
+  // ✅ Fraud & Risk Scoring
+  fraudScore       Float?       @default(0)
+  isFraud          Boolean      @default(false)
+  fraudReason      String?
+
+  // ✅ Admin Assignment
+  assignedTo       String?      // Admin ID handling the case
+  assignedAt       DateTime?
+
+  // ✅ Resolution Tracking
+  resolvedAt       DateTime?
+  resolvedBy       String?      // Admin ID
+  resolution       String?      @db.Text
+  resolutionType   String?      // REPAIRED / REPLACED / REFUNDED
+  txHash           String?      // Blockchain transaction hash for resolution
+
+  // ✅ Rejection / Cancellation
+  rejectedAt       DateTime?
+  rejectionReason  String?      @db.Text
+  cancelledAt      DateTime?
+  cancelReason     String?
+
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
+  // ✅ Related Models
+  logs             ClaimLog[]
+  documents        ClaimDocument[]
+
+  @@index([warrantyId])
+  @@index([productId])
+  @@index([status])
+  @@index([claimNumber])
+}
+
+model ClaimLog {
+  id        String      @id @default(cuid())
+  claimId   String
+  claim     Claim       @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  status    ClaimStatus
+  note      String?     @db.Text
+  changedBy String?     // adminId or userId
+  createdAt DateTime    @default(now())
+
+  @@index([claimId])
+}
+
+model ClaimDocument {
+  id         String   @id @default(cuid())
+  claimId    String
+  claim      Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+
+  name       String   // e.g. "Cracked screen photo"
+  url        String   // Cloudinary/Storage URL
+  fileType   String   // IMAGE / VIDEO / PDF
+  uploadedBy String 
+  createdAt  DateTime @default(now())
+
+  @@index([claimId])
+}
+
+// ==========================================
+// SYSTEM AUDIT & GOVERNANCE
+// ==========================================
+
+enum AuditAction {
+  BRAND_CREATE
+  BRAND_UPDATE
+  PRODUCT_CREATE
+  PRODUCT_UPDATE
+  SERIAL_UPLOAD
+  RULE_CHANGE        // When Global or SKU policy changes
+  CLAIM_STATUS_CHANGE
+  RETAILER_ADD
+  USER_INVITE
+  SYSTEM_CONFIG_CHANGE
+}
+
+enum AuditEntity {
+  BRAND
+  PRODUCT
+  SERIAL
+  RETAILER
+  CLAIM
+  WARRANTY_RULE
+  GLOBAL_CONFIG
+  USER
+}
+
+model AuditLog {
+  id          String      @id @default(cuid())
+  
+  // 👤 The Admin
+  adminId     String
+  admin       Admin       @relation(fields: [adminId], references: [id]) // ✅ ADD THIS RELATION
+  adminName   String      // Denormalized for fast reading in logs
+  adminEmail  String
+
+  // 🛠️ The Action
+  action      AuditAction
+  entity      AuditEntity
+  entityId    String?     // ID of the Brand, Product, or Claim affected
+  entityName  String?     // Name of the entity (e.g., "Sony" or "CLM-003")
+
+  // 📝 Details
+  details     String      @db.Text // Human readable e.g., "Updated warranty from 12 to 24 months"
+  oldValue    Json?       // Snapshot of data before change
+  newValue    Json?       // Snapshot of data after change
+  
+  // 🔗 Blockchain Context
+  txHash      String?     // If the action involved an on-chain event
+  ipAddress   String?
+
+  createdAt   DateTime    @default(now())
+
+  @@index([adminId])
+  @@index([entity])
+  @@index([entityId])
+  @@index([action])
+  @@index([createdAt])
+}
+
 //////////////////////////////////////////////////////
 // 🧾 WARRANTY CORE (BLOCKCHAIN LINKED)
 //////////////////////////////////////////////////////
@@ -391,6 +568,7 @@ model Warranty {
   claims     Claim[]
   events     WarrantyEvent[]
   transfers  Transfer[]
+  
 
   @@index([tokenId])
   @@index([ownerWallet])
@@ -476,51 +654,8 @@ enum TransferStatus {
   REJECTED
 }
 
-//////////////////////////////////////////////////////
-// 🛠️ CLAIM SYSTEM
-//////////////////////////////////////////////////////
 
-model Claim {
-  id         String      @id @default(cuid())
-  warrantyId String
-  userId     String
-  type       ClaimType
-  status     ClaimStatus @default(PENDING)
-  reason     String?     @db.Text
-  fraudScore Float?
-  isFraud    Boolean     @default(false)
 
-  // Resolution details
-  resolvedAt  DateTime?
-  resolvedBy  String?   // adminId who resolved
-  resolution  String?   @db.Text
-  txHash      String?   // on-chain resolution hash
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  warranty Warranty   @relation(fields: [warrantyId], references: [id])
-  user     User       @relation(fields: [userId], references: [id])
-  logs     ClaimLog[]
-
-  @@index([warrantyId])
-  @@index([userId])
-  @@index([status])
-  @@index([isFraud])
-}
-
-model ClaimLog {
-  id        String      @id @default(cuid())
-  claimId   String
-  status    ClaimStatus
-  note      String?     @db.Text
-  changedBy String?     // adminId or userId
-  createdAt DateTime    @default(now())
-
-  claim Claim @relation(fields: [claimId], references: [id])
-
-  @@index([claimId])
-}
 
 model WarrantyEvent {
   id         String    @id @default(cuid())
@@ -537,45 +672,12 @@ model WarrantyEvent {
   @@index([createdAt])
 }
 
-//////////////////////////////////////////////////////
-// 📜 AUDIT SYSTEM
-//////////////////////////////////////////////////////
 
-model AuditLog {
-  id        String   @id @default(cuid())
-  adminId   String
-  action    String
-  entity    String
-  entityId  String?  // id of the record affected
-  details   String?  @db.Text
-  txHash    String?
-  ipAddress String?  // admin IP for security
-  createdAt DateTime @default(now())
-
-  admin Admin @relation(fields: [adminId], references: [id])
-
-  @@index([adminId])
-  @@index([action])
-  @@index([createdAt])
-  @@index([entityId])
-}
 
 //////////////////////////////////////////////////////
 // 📊 ENUMS
 //////////////////////////////////////////////////////
 
-enum ClaimStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  IN_PROGRESS
-}
-
-enum ClaimType {
-  REPAIR
-  REPLACEMENT
-  REFUND
-}
 
 enum EventType {
   CREATED
