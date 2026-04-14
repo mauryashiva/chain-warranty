@@ -1,185 +1,123 @@
 "use client";
 
+import { useState } from "react";
+import { Search, RefreshCcw } from "lucide-react";
 import { useAdminUsers } from "@/hooks/admin/use-admin-users";
-import {
-  UserPlus,
-  ShieldCheck,
-  Mail,
-  Wallet,
-  MoreHorizontal,
-  UserCircle,
-  Check,
-} from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const PERMISSIONS = [
-  {
-    action: "Add / edit brands",
-    super: true,
-    brand: true,
-    claims: false,
-    retailer: false,
-  },
-  {
-    action: "Add products & SKUs",
-    super: true,
-    brand: true,
-    claims: false,
-    retailer: false,
-  },
-  {
-    action: "Upload serials",
-    super: true,
-    brand: true,
-    claims: false,
-    retailer: false,
-  },
-  {
-    action: "Manage retailers",
-    super: true,
-    brand: false,
-    claims: false,
-    retailer: true,
-  },
-  {
-    action: "Review claims",
-    super: true,
-    brand: false,
-    claims: true,
-    retailer: false,
-  },
-  {
-    action: "Resolve claims on-chain",
-    super: true,
-    brand: false,
-    claims: true,
-    retailer: false,
-  },
-];
+// ✅ Sub-components
+import InviteUserModal from "@/components/admin/users/InviteUserModal";
+import EditAdminModal from "@/components/admin/users/EditAdminModal";
+import UserHeader from "@/components/admin/users/UserHeader";
+import UserTable from "@/components/admin/users/UserTable";
+import PermissionMatrix from "@/components/admin/users/PermissionMatrix";
 
 export default function AdminUsersPage() {
-  const { admins, loading } = useAdminUsers();
+  const { admins, loading, refresh, inviteAdmin, updateAdmin, revokeAdmin } =
+    useAdminUsers() as any;
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [selectedAdmin, setSelectedAdmin] = useState<any>(null);
+
+  const filteredUsers = (admins || []).filter(
+    (u: any) =>
+      u.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      u.walletAddress?.toLowerCase().includes(searchQuery.toLowerCase()),
+  );
+
+  const handleEditClick = (user: any) => {
+    setSelectedAdmin(user);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDeleteClick = async (adminId: string) => {
+    if (
+      confirm("Are you sure you want to revoke this administrator's access?")
+    ) {
+      await revokeAdmin(adminId);
+    }
+  };
+
+  // ✅ Boolean to check if any modal is active
+  const isAnyModalOpen = isInviteModalOpen || isEditModalOpen;
 
   return (
-    <div className="space-y-12 animate-in fade-in duration-700">
-      {/* Header */}
-      <div className="flex justify-between items-end">
-        <div>
-          <h1 className="text-3xl font-black tracking-tighter text-slate-900 dark:text-white">
-            Admin Users
-          </h1>
-          <p className="text-sm font-bold text-slate-500 dark:text-gray-400">
-            Manage admin roles and access permissions.
-          </p>
+    <div className="relative min-h-screen">
+      {/* 1. MAIN CONTENT LAYER 
+         We force this layer to stay below the modals using z-0 or relative 
+      */}
+      <div
+        className={cn(
+          "space-y-12 pb-24 px-6 md:px-10 pt-8 max-w-400 mx-auto animate-in fade-in duration-700",
+          isAnyModalOpen
+            ? "pointer-events-none opacity-40 grayscale-[0.5] blur-[2px] transition-all duration-500"
+            : "opacity-100 blur-0",
+        )}
+      >
+        <UserHeader onInviteClick={() => setIsInviteModalOpen(true)} />
+
+        {/* --- SEARCH & SYNC --- */}
+        <div className="flex flex-col md:flex-row gap-4 items-center justify-between px-2">
+          <div className="relative w-full md:w-112.5 group">
+            <Search
+              className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-600 transition-colors"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="Search by Name, Email or Wallet..."
+              className="w-full pl-14 pr-4 py-4 rounded-3xl bg-slate-50 dark:bg-gray-900 border border-slate-100 dark:border-gray-800 text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-4 ring-blue-600/5 transition-all shadow-sm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <button
+            onClick={() => refresh()}
+            className="flex items-center gap-2 px-6 py-4 bg-slate-100 dark:bg-gray-800 text-slate-800 dark:text-slate-200 rounded-2xl hover:bg-blue-600 hover:text-white transition-all duration-500 font-black text-[10px] uppercase tracking-widest group shadow-sm active:scale-95"
+          >
+            <RefreshCcw
+              size={14}
+              className="group-active:rotate-180 transition-transform duration-500"
+            />
+            Synchronize
+          </button>
         </div>
-        <button className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-xl font-black text-xs shadow-lg shadow-blue-600/20">
-          <UserPlus size={16} strokeWidth={3} /> INVITE ADMIN
-        </button>
+
+        <UserTable
+          users={filteredUsers}
+          loading={loading}
+          onEdit={handleEditClick}
+          onDelete={handleDeleteClick}
+        />
+
+        <PermissionMatrix />
       </div>
 
-      {/* 01. ADMIN LIST TABLE */}
-      <div className="bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden shadow-sm">
-        <table className="w-full text-left">
-          <thead className="bg-slate-50/50 dark:bg-gray-800/30">
-            <tr className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-              <th className="px-8 py-5">Name / Email</th>
-              <th className="px-8 py-5">Role</th>
-              <th className="px-8 py-5">Wallet Address</th>
-              <th className="px-8 py-5">Status</th>
-              <th className="px-8 py-5 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 dark:divide-gray-800">
-            {admins.map((admin: any) => (
-              <tr
-                key={admin.id}
-                className="hover:bg-slate-50 dark:hover:bg-white/5 transition-colors"
-              >
-                <td className="px-8 py-6">
-                  <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-full bg-slate-100 dark:bg-gray-800 flex items-center justify-center text-blue-600 font-black text-xs uppercase">
-                      {admin.name[0]}
-                    </div>
-                    <div>
-                      <p className="text-xs font-black text-slate-900 dark:text-white">
-                        {admin.name}
-                      </p>
-                      <p className="text-[10px] font-bold text-slate-400 lowercase">
-                        {admin.email}
-                      </p>
-                    </div>
-                  </div>
-                </td>
-                <td className="px-8 py-6 text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest">
-                  {admin.role.replace("_", " ")}
-                </td>
-                <td className="px-8 py-6 font-mono text-[10px] text-blue-600">
-                  {admin.wallet.slice(0, 12)}...
-                </td>
-                <td className="px-8 py-6">
-                  <span className="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 text-[9px] font-black uppercase">
-                    Active
-                  </span>
-                </td>
-                <td className="px-8 py-6 text-right">
-                  <button className="text-[10px] font-black text-slate-400 hover:text-blue-600 uppercase">
-                    Revoke
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      {/* 2. MODALS LAYER 
+         Keep these at the bottom of the JSX and ensure high Z-index in component 
+      */}
+      {isInviteModalOpen && (
+        <InviteUserModal
+          isOpen={isInviteModalOpen}
+          onClose={() => setIsInviteModalOpen(false)}
+          onInvite={inviteAdmin}
+        />
+      )}
 
-      {/* 02. ROLE PERMISSIONS MATRIX (Industry Standard UI) */}
-      <section className="space-y-6 pt-6">
-        <h3 className="text-[10px] font-black uppercase tracking-[0.3em] text-blue-600">
-          Role Permissions Matrix
-        </h3>
-        <div className="bg-white dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-[2.5rem] overflow-hidden">
-          <table className="w-full text-left text-[11px] font-bold">
-            <thead>
-              <tr className="bg-slate-50/50 dark:bg-gray-800/30 text-[9px] font-black uppercase tracking-widest text-slate-400">
-                <th className="px-8 py-4">Permission</th>
-                <th className="px-4 py-4 text-center">Super Admin</th>
-                <th className="px-4 py-4 text-center">Brand Mgr</th>
-                <th className="px-4 py-4 text-center">Claims Agent</th>
-                <th className="px-4 py-4 text-center">Retailer Mgr</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-gray-800">
-              {PERMISSIONS.map((p) => (
-                <tr key={p.action}>
-                  <td className="px-8 py-4 text-slate-900 dark:text-white">
-                    {p.action}
-                  </td>
-                  <td className="px-4 py-4 text-center">
-                    {p.super && (
-                      <Check size={14} className="mx-auto text-emerald-500" />
-                    )}
-                  </td>
-                  <td className="px-4 py-4 text-center">
-                    {p.brand && (
-                      <Check size={14} className="mx-auto text-emerald-500" />
-                    )}
-                  </td>
-                  <td className="px-4 py-4 text-center">
-                    {p.claims && (
-                      <Check size={14} className="mx-auto text-emerald-500" />
-                    )}
-                  </td>
-                  <td className="px-4 py-4 text-center">
-                    {p.retailer && (
-                      <Check size={14} className="mx-auto text-emerald-500" />
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      {isEditModalOpen && (
+        <EditAdminModal
+          isOpen={isEditModalOpen}
+          admin={selectedAdmin}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedAdmin(null);
+          }}
+          onUpdate={updateAdmin}
+        />
+      )}
     </div>
   );
 }

@@ -10,6 +10,7 @@ import {
   AlertCircle,
   Fingerprint,
   Lock,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -18,6 +19,7 @@ declare global {
   interface Window {
     ethereum?: {
       request: (args: { method: string; params?: any[] }) => Promise<any>;
+      isMetaMask?: boolean;
     };
   }
 }
@@ -27,6 +29,7 @@ export default function AdminLoginPage() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [hasMetaMask, setHasMetaMask] = useState(true); // Default to true to avoid layout shift
   const router = useRouter();
 
   const AUTHORIZED_ADMINS = [
@@ -34,19 +37,31 @@ export default function AdminLoginPage() {
     "0xYourSecondAdminAddressHere",
   ];
 
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    setMounted(true);
+    // Check for MetaMask existence on mount
+    if (typeof window !== "undefined") {
+      setHasMetaMask(!!window.ethereum);
+    }
+  }, []);
+
+  const handleInstallMetaMask = () => {
+    window.open("https://metamask.io/download/", "_blank");
+  };
 
   const handleAdminLogin = async () => {
+    if (!window.ethereum) {
+      setError(
+        "MetaMask extension not detected. Please install and try again.",
+      );
+      setHasMetaMask(false);
+      return;
+    }
+
     setIsAuthenticating(true);
     setError(null);
 
     try {
-      if (!window.ethereum) {
-        throw new Error(
-          "MetaMask extension not detected. Please install and try again.",
-        );
-      }
-
       // Step 1: Connect Wallet
       const accounts = await window.ethereum.request({
         method: "eth_requestAccounts",
@@ -145,9 +160,14 @@ export default function AdminLoginPage() {
             </div>
 
             <div className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+              <div
+                className={cn(
+                  "h-2 w-2 rounded-full animate-pulse",
+                  hasMetaMask ? "bg-emerald-500" : "bg-amber-500",
+                )}
+              />
               <span className="text-[10px] font-bold text-gray-600 dark:text-zinc-400 uppercase">
-                System Operational
+                {hasMetaMask ? "System Operational" : "Protocol Disconnected"}
               </span>
             </div>
           </div>
@@ -180,9 +200,9 @@ export default function AdminLoginPage() {
               )}
             </AnimatePresence>
 
-            {/* Button */}
+            {/* Button - Changes based on MetaMask presence */}
             <button
-              onClick={handleAdminLogin}
+              onClick={hasMetaMask ? handleAdminLogin : handleInstallMetaMask}
               disabled={isAuthenticating}
               className={cn(
                 "w-full group flex items-center justify-between p-1.5 rounded-xl transition-all active:scale-[0.99] disabled:opacity-70",
@@ -192,14 +212,23 @@ export default function AdminLoginPage() {
               <span className="pl-5 text-xs font-bold uppercase tracking-widest">
                 {isAuthenticating
                   ? "Establishing Secure Session..."
-                  : "Authenticate with Wallet"}
+                  : hasMetaMask
+                    ? "Authenticate with Wallet"
+                    : "Install MetaMask Extension"}
               </span>
 
-              <div className="bg-blue-600 p-3 rounded-lg text-white">
+              <div
+                className={cn(
+                  "p-3 rounded-lg text-white",
+                  hasMetaMask ? "bg-blue-600" : "bg-amber-600",
+                )}
+              >
                 {isAuthenticating ? (
                   <Loader2 className="animate-spin" size={18} />
-                ) : (
+                ) : hasMetaMask ? (
                   <ChevronRight size={18} strokeWidth={3} />
+                ) : (
+                  <Download size={18} strokeWidth={3} />
                 )}
               </div>
             </button>

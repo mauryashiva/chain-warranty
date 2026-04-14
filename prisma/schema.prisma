@@ -44,28 +44,9 @@ model Wallet {
   @@index([address])
 }
 
-//////////////////////////////////////////////////////
-// 🔐 ADMIN & RBAC SYSTEM
-//////////////////////////////////////////////////////
-
-model Admin {
-  id        String      @id @default(cuid())
-  wallet    String      @unique
-  name      String
-  email     String      @unique
-  role      AdminRole   @default(CLAIMS_AGENT)
-  status    AdminStatus @default(ACTIVE)
-  twoFAEnabled Boolean  @default(false)
-  lastLogin DateTime?
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @default(now()) @updatedAt
-
-  auditLogs AuditLog[]
-
-  @@index([wallet])
-  @@index([role])
-  @@index([status])
-}
+// ==========================================
+// ADMIN & ACCESS CONTROL (RBAC)
+// ==========================================
 
 enum AdminRole {
   SUPER_ADMIN
@@ -78,6 +59,57 @@ enum AdminStatus {
   ACTIVE
   INACTIVE
   REVOKED
+}
+
+model Admin {
+  id String @id @default(cuid())
+
+  // --- Authentication (MetaMask SIWE) ---
+  // Store as lowercase to prevent case-sensitivity login issues
+  walletAddress String @unique
+
+  // --- Profile ---
+  name      String
+  email     String  @unique
+  phone     String?
+  avatarUrl String?
+
+  // --- Role & Status ---
+  role   AdminRole   @default(CLAIMS_AGENT)
+  status AdminStatus @default(ACTIVE)
+
+  // --- Permissions Matrix (Directly matches your UI Matrix) ---
+  canManageBrands    Boolean @default(false)
+  canManageProducts  Boolean @default(false)
+  canUploadSerials   Boolean @default(false)
+  canManageRetailers Boolean @default(false)
+  canReviewClaims    Boolean @default(false)
+  canResolveOnChain  Boolean @default(false) // For blockchain transactions
+  canManageAdmins    Boolean @default(false)
+  canViewAuditLog    Boolean @default(true)
+
+  // --- Security & Session Tracking ---
+  twoFAEnabled Boolean   @default(false)
+  twoFASecret  String? // Encrypted TOTP secret
+  lastLogin    DateTime?
+  lastLoginIp  String?
+  loginCount   Int       @default(0)
+
+  // --- Accountability ---
+  isDeleted Boolean  @default(false)
+  createdBy String? // adminId of Super Admin who invited
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // --- Relations ---
+  auditLogs      AuditLog[]
+  // Tracks which claims this admin specifically resolved
+  resolvedClaims Claim[]    @relation("AdminResolver")
+
+  @@index([walletAddress])
+  @@index([role])
+  @@index([status])
+  @@index([email])
 }
 
 //////////////////////////////////////////////////////
@@ -100,11 +132,11 @@ model Company {
 }
 
 model Brand {
-  id          String  @id @default(cuid())
-  name        String  @unique
-  slug        String  @unique
-  country     String
-  status      BrandStatus @default(ACTIVE)
+  id      String      @id @default(cuid())
+  name    String      @unique
+  slug    String      @unique
+  country String
+  status  BrandStatus @default(ACTIVE)
 
   website      String?
   supportEmail String?
@@ -168,9 +200,9 @@ model Product {
   brandId String
   brand   Brand  @relation(fields: [brandId], references: [id])
 
-  warrantyRule   WarrantyRule?
-  serials    Serial[]
-  warranties Warranty[]
+  warrantyRule WarrantyRule?
+  serials      Serial[]
+  warranties   Warranty[]
   claims       Claim[]
 
   @@index([brandId])
@@ -186,47 +218,46 @@ enum ProductStatus {
 }
 
 model GlobalConfig {
-  id                             String   @id @default(cuid())
-  singleton String @unique @default("global") // prevents multiple rows
+  id                             String  @id @default(cuid())
+  singleton                      String  @unique @default("global") // prevents multiple rows
   // Registration Rules
-  allowRegistrationAfterPurchase Boolean  @default(true)
-  maxDaysToRegister              Int      @default(30)
-  
+  allowRegistrationAfterPurchase Boolean @default(true)
+  maxDaysToRegister              Int     @default(30)
+
   // Transfer Rules
-  allowTransfer                  Boolean  @default(true)
-  allowTransferWithOpenClaim     Boolean  @default(false)
-  requireOtpForTransfer          Boolean  @default(true)
-  requireIdProofForTransfer      Boolean  @default(false)
-  
+  allowTransfer              Boolean @default(true)
+  allowTransferWithOpenClaim Boolean @default(false)
+  requireOtpForTransfer      Boolean @default(true)
+  requireIdProofForTransfer  Boolean @default(false)
+
   // Lifecycle Rules
-  allowClaimAfterExpiry          Boolean  @default(false)
-  autoExpireNft                  Boolean  @default(true)
-  
-  updatedAt                      DateTime @updatedAt
-  
+  allowClaimAfterExpiry Boolean @default(false)
+  autoExpireNft         Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
 }
 
 // 2. Specific Overrides for individual Product Models
 model WarrantyRule {
-  id                String   @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // Link to the Product
-  productId         String   @unique
-  product           Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
+  productId String  @unique
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
   // Coverage Specs
-  defaultPeriod     Int      @default(12) // Months (e.g. 12, 24, 36)
-  extendedPeriod    Int      @default(0)  // Months (Optional addition)
-  
+  defaultPeriod  Int @default(12) // Months (e.g. 12, 24, 36)
+  extendedPeriod Int @default(0) // Months (Optional addition)
+
   // Claim Logic
-  maxClaimsAllowed  Int      @default(3)  // Total claims allowed per lifetime
-  claimCooldownDays Int      @default(30) // Days to wait between two claims
-  
+  maxClaimsAllowed  Int @default(3) // Total claims allowed per lifetime
+  claimCooldownDays Int @default(30) // Days to wait between two claims
+
   // Transfer Logic
-  isTransferable    Boolean  @default(true)
-  
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  isTransferable Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 //////////////////////////////////////////////////////
@@ -248,14 +279,14 @@ model Serial {
   updatedAt DateTime @default(now()) @updatedAt
 
   // Relations
-  productId  String
-  product    Product   @relation(fields: [productId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
 
   retailerId String?
   retailer   Retailer? @relation(fields: [retailerId], references: [id])
 
   // One serial = one warranty (unique)
-  warranty   Warranty? 
+  warranty Warranty?
 
   @@index([serialNumber])
   @@index([productId])
@@ -280,8 +311,6 @@ model Retailer {
   slug String @unique
 
   type RetailerType @default(BOTH)
-  
-  
 
   contactEmail String?
   contactPhone String?
@@ -305,8 +334,7 @@ model Retailer {
 
   serials    Serial[]
   warranties Warranty[]
-  brands Brand[] // ← add this one line
-
+  brands     Brand[] // ← add this one line
 
   @@index([slug])
   @@index([status])
@@ -352,58 +380,63 @@ enum ClaimPriority {
 }
 
 model Claim {
-  id              String        @id @default(cuid())
-  claimNumber     String        @unique // e.g. CLM-2024-0001
+  id          String @id @default(cuid())
+  claimNumber String @unique // e.g. CLM-2024-0001
 
   // ✅ Core Relations
-  warrantyId      String
-  warranty        Warranty      @relation(fields: [warrantyId], references: [id])
-  
-  productId       String        // Direct link for easier analytics
-  product         Product       @relation(fields: [productId], references: [id])
+  warrantyId String
+  warranty   Warranty @relation(fields: [warrantyId], references: [id])
 
-  userId          String
-  user            User          @relation(fields: [userId], references: [id])
+  productId String // Direct link for easier analytics
+  product   Product @relation(fields: [productId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
   // ✅ Claim Details
-  type            ClaimType
-  status          ClaimStatus   @default(PENDING)
-  priority        ClaimPriority @default(MEDIUM)
-  subject         String        // e.g. "Left earbud no sound"
-  description     String        @db.Text
+  type        ClaimType
+  status      ClaimStatus   @default(PENDING)
+  priority    ClaimPriority @default(MEDIUM)
+  subject     String // e.g. "Left earbud no sound"
+  description String        @db.Text
 
   // ✅ Issue Metadata
-  issueDate        DateTime? 
-  productCondition String?   // Physical state of item
+  issueDate        DateTime?
+  productCondition String? // Physical state of item
 
   // ✅ Fraud & Risk Scoring
-  fraudScore       Float?       @default(0)
-  isFraud          Boolean      @default(false)
-  fraudReason      String?
+  fraudScore  Float?  @default(0)
+  isFraud     Boolean @default(false)
+  fraudReason String?
 
   // ✅ Admin Assignment
-  assignedTo       String?      // Admin ID handling the case
-  assignedAt       DateTime?
+  assignedTo String? // Admin ID handling the case
+  assignedAt DateTime?
 
   // ✅ Resolution Tracking
-  resolvedAt       DateTime?
-  resolvedBy       String?      // Admin ID
-  resolution       String?      @db.Text
-  resolutionType   String?      // REPAIRED / REPLACED / REFUNDED
-  txHash           String?      // Blockchain transaction hash for resolution
+  resolvedAt      DateTime?
+  // 1. The ID field (Renamed from resolvedBy to resolvedById)
+  resolvedById    String?
+  resolvedBy      Admin?   @relation("AdminResolver", fields: [resolvedById], references: [id])
+
+  // 2. The Formal Relation (Links to your Admin model)
+  resolvedBy     String? // Admin ID
+  resolution     String? @db.Text
+  resolutionType String? // REPAIRED / REPLACED / REFUNDED
+  txHash         String? // Blockchain transaction hash for resolution
 
   // ✅ Rejection / Cancellation
-  rejectedAt       DateTime?
-  rejectionReason  String?      @db.Text
-  cancelledAt      DateTime?
-  cancelReason     String?
+  rejectedAt      DateTime?
+  rejectionReason String?   @db.Text
+  cancelledAt     DateTime?
+  cancelReason    String?
 
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // ✅ Related Models
-  logs             ClaimLog[]
-  documents        ClaimDocument[]
+  logs      ClaimLog[]
+  documents ClaimDocument[]
 
   @@index([warrantyId])
   @@index([productId])
@@ -412,27 +445,27 @@ model Claim {
 }
 
 model ClaimLog {
-  id        String      @id @default(cuid())
-  claimId   String
-  claim     Claim       @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  id      String @id @default(cuid())
+  claimId String
+  claim   Claim  @relation(fields: [claimId], references: [id], onDelete: Cascade)
 
   status    ClaimStatus
   note      String?     @db.Text
-  changedBy String?     // adminId or userId
+  changedBy String? // adminId or userId
   createdAt DateTime    @default(now())
 
   @@index([claimId])
 }
 
 model ClaimDocument {
-  id         String   @id @default(cuid())
-  claimId    String
-  claim      Claim    @relation(fields: [claimId], references: [id], onDelete: Cascade)
+  id      String @id @default(cuid())
+  claimId String
+  claim   Claim  @relation(fields: [claimId], references: [id], onDelete: Cascade)
 
-  name       String   // e.g. "Cracked screen photo"
-  url        String   // Cloudinary/Storage URL
-  fileType   String   // IMAGE / VIDEO / PDF
-  uploadedBy String 
+  name       String // e.g. "Cracked screen photo"
+  url        String // Cloudinary/Storage URL
+  fileType   String // IMAGE / VIDEO / PDF
+  uploadedBy String
   createdAt  DateTime @default(now())
 
   @@index([claimId])
@@ -448,7 +481,7 @@ enum AuditAction {
   PRODUCT_CREATE
   PRODUCT_UPDATE
   SERIAL_UPLOAD
-  RULE_CHANGE        // When Global or SKU policy changes
+  RULE_CHANGE // When Global or SKU policy changes
   CLAIM_STATUS_CHANGE
   RETAILER_ADD
   USER_INVITE
@@ -467,30 +500,30 @@ enum AuditEntity {
 }
 
 model AuditLog {
-  id          String      @id @default(cuid())
-  
+  id String @id @default(cuid())
+
   // 👤 The Admin
-  adminId     String
-  admin       Admin       @relation(fields: [adminId], references: [id]) // ✅ ADD THIS RELATION
-  adminName   String      // Denormalized for fast reading in logs
-  adminEmail  String
+  adminId    String
+  admin      Admin  @relation(fields: [adminId], references: [id]) // ✅ ADD THIS RELATION
+  adminName  String // Denormalized for fast reading in logs
+  adminEmail String
 
   // 🛠️ The Action
-  action      AuditAction
-  entity      AuditEntity
-  entityId    String?     // ID of the Brand, Product, or Claim affected
-  entityName  String?     // Name of the entity (e.g., "Sony" or "CLM-003")
+  action     AuditAction
+  entity     AuditEntity
+  entityId   String? // ID of the Brand, Product, or Claim affected
+  entityName String? // Name of the entity (e.g., "Sony" or "CLM-003")
 
   // 📝 Details
-  details     String      @db.Text // Human readable e.g., "Updated warranty from 12 to 24 months"
-  oldValue    Json?       // Snapshot of data before change
-  newValue    Json?       // Snapshot of data after change
-  
-  // 🔗 Blockchain Context
-  txHash      String?     // If the action involved an on-chain event
-  ipAddress   String?
+  details  String @db.Text // Human readable e.g., "Updated warranty from 12 to 24 months"
+  oldValue Json? // Snapshot of data before change
+  newValue Json? // Snapshot of data after change
 
-  createdAt   DateTime    @default(now())
+  // 🔗 Blockchain Context
+  txHash    String? // If the action involved an on-chain event
+  ipAddress String?
+
+  createdAt DateTime @default(now())
 
   @@index([adminId])
   @@index([entity])
@@ -557,8 +590,8 @@ model Warranty {
   productId String
   product   Product @relation(fields: [productId], references: [id])
 
-  serialId String?  @unique
-  serial   Serial?  @relation(fields: [serialId], references: [id])
+  serialId String? @unique
+  serial   Serial? @relation(fields: [serialId], references: [id])
 
   retailerId String?
   retailer   Retailer? @relation(fields: [retailerId], references: [id])
@@ -568,7 +601,6 @@ model Warranty {
   claims     Claim[]
   events     WarrantyEvent[]
   transfers  Transfer[]
-  
 
   @@index([tokenId])
   @@index([ownerWallet])
@@ -596,8 +628,8 @@ model WarrantyOwnership {
   warrantyId String
   userId     String
   isActive   Boolean  @default(true)
-  fromWallet String?  // wallet at time of receiving
-  toWallet   String?  // wallet transferred to
+  fromWallet String? // wallet at time of receiving
+  toWallet   String? // wallet transferred to
   acquiredAt DateTime @default(now())
   createdAt  DateTime @default(now())
 
@@ -619,11 +651,11 @@ model Transfer {
   status     TransferStatus @default(PENDING)
 
   // Transfer details
-  fromWallet    String?
-  toWallet      String?
-  reason        String?  // SOLD, GIFT, INHERITED etc
-  salePrice     Decimal? @db.Decimal(10, 2)
-  transferDate  DateTime?
+  fromWallet   String?
+  toWallet     String?
+  reason       String? // SOLD, GIFT, INHERITED etc
+  salePrice    Decimal?  @db.Decimal(10, 2)
+  transferDate DateTime?
 
   // ID verification
   idType   String?
@@ -654,9 +686,6 @@ enum TransferStatus {
   REJECTED
 }
 
-
-
-
 model WarrantyEvent {
   id         String    @id @default(cuid())
   warrantyId String
@@ -672,12 +701,9 @@ model WarrantyEvent {
   @@index([createdAt])
 }
 
-
-
 //////////////////////////////////////////////////////
 // 📊 ENUMS
 //////////////////////////////////////////////////////
-
 
 enum EventType {
   CREATED
