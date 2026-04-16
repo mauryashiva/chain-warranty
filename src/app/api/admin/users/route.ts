@@ -101,10 +101,7 @@ export async function DELETE(req: Request) {
 
     if (!adminId) throw new Error("Admin ID required for revocation.");
 
-    const revokedAdmin = await AdminController.revokeAccess(
-      adminId,
-      performerId!,
-    );
+    const revokedAdmin = await AdminController.revokeAccess(adminId);
 
     await AuditController.log({
       adminId: performerId || "SYSTEM",

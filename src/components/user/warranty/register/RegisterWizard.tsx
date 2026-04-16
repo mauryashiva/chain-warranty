@@ -7,7 +7,13 @@ import StepReviewConfirm from "./StepReviewConfirm";
 import { cn } from "@/lib/utils";
 import { Check, Shield } from "lucide-react";
 
-const STEPS = ["Product info", "Images & docs", "Owner & confirm"];
+const STEPS = [
+  "Product Selection",
+  "Serial Validation",
+  "Purchase Info",
+  "Upload Documents",
+  "Review + Confirm",
+];
 
 export default function RegisterWizard() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -17,6 +23,7 @@ export default function RegisterWizard() {
     brand: "Pending", // 👈 Add this
     productName: "Pending", // 👈 Add this
     productId: "", // 🛠️ Added: Required for ProductSelect logic
+    modelNumber: "",
     serialNumber: "",
     imei: "",
     category: "",
@@ -127,10 +134,31 @@ export default function RegisterWizard() {
                 data={formData}
                 update={handleUpdate}
                 onNext={nextStep}
+                step={1}
               />
             )}
 
             {currentStep === 2 && (
+              <StepProductInfo
+                data={formData}
+                update={handleUpdate}
+                onNext={nextStep}
+                onBack={prevStep}
+                step={2}
+              />
+            )}
+
+            {currentStep === 3 && (
+              <StepProductInfo
+                data={formData}
+                update={handleUpdate}
+                onNext={nextStep}
+                onBack={prevStep}
+                step={3}
+              />
+            )}
+
+            {currentStep === 4 && (
               <StepImagesDocs
                 data={formData}
                 update={handleUpdate}
@@ -139,7 +167,7 @@ export default function RegisterWizard() {
               />
             )}
 
-            {currentStep === 3 && (
+            {currentStep === 5 && (
               <StepReviewConfirm
                 data={formData}
                 update={handleUpdate}

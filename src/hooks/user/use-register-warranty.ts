@@ -63,6 +63,7 @@ export function useRegisterWarranty() {
         // Product Snapshot (Frontend can pass these if they exist)
         productName: formData.productName,
         brand: formData.brand,
+        modelNumber: formData.modelNumber,
         serialNumber: formData.serialNumber,
         imei: formData.imei,
         category: formData.category,

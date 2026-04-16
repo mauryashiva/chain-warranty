@@ -18,8 +18,10 @@ export async function createWarranty(req: Request) {
     // If frontend sends IDs instead of names, we fetch names from DB
     let enrichedBrand = body.brand;
     let enrichedProductName = body.productName;
+    let brandId = body.brandId;
+    let modelNumber = body.modelNumber;
 
-    if (!enrichedProductName || !enrichedBrand) {
+    if (!enrichedProductName || !enrichedBrand || !brandId || !modelNumber) {
       const productData = await prisma.product.findUnique({
         where: { id: body.productId },
         include: { brand: true },
@@ -28,6 +30,8 @@ export async function createWarranty(req: Request) {
       if (productData) {
         enrichedProductName = productData.name;
         enrichedBrand = productData.brand.name;
+        brandId = productData.brand.id;
+        modelNumber = productData.modelNumber;
       }
     }
 
@@ -78,6 +82,7 @@ export async function createWarranty(req: Request) {
 
     // 🔥 STEP 2 — Create warranty (Blockchain + DB Mapping)
     const result = await warrantyService.create({
+      brandId: brandId,
       userId: user.id,
       walletAddress: body.walletAddress,
       productId: body.productId,
@@ -85,6 +90,7 @@ export async function createWarranty(req: Request) {
       // Product Information (Using enriched names)
       productName: enrichedProductName,
       brand: enrichedBrand,
+      modelNumber: modelNumber,
       serialNumber: body.serialNumber,
       imei: body.imei || null,
       category: body.category || null,

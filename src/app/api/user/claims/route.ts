@@ -39,13 +39,32 @@ export async function POST(req: Request) {
 
     const userId = wallet.user.id;
 
+    // 🔍 Fetch warranty to get productId
+    const warranty = await prisma.warranty.findUnique({
+      where: { id: warrantyId },
+      select: { productId: true },
+    });
+
+    if (!warranty) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Warranty not found",
+        },
+        { status: 404 },
+      );
+    }
+
     // 🧾 Create claim
     const claim = await prisma.claim.create({
       data: {
+        claimNumber: `CLM-${Date.now()}`,
         warrantyId,
+        productId: warranty.productId,
         userId,
         type,
-        reason: reason || "",
+        subject: reason || "",
+        description: reason || "",
         status: status || "PENDING",
       },
     });

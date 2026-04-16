@@ -417,7 +417,7 @@ model Claim {
   resolvedAt      DateTime?
   // 1. The ID field (Renamed from resolvedBy to resolvedById)
   resolvedById    String?
-  resolvedBy      Admin?   @relation("AdminResolver", fields: [resolvedById], references: [id])
+  resolvedByAdmin Admin?    @relation("AdminResolver", fields: [resolvedById], references: [id])
 
   // 2. The Formal Relation (Links to your Admin model)
   resolvedBy     String? // Admin ID
@@ -551,7 +551,9 @@ model Warranty {
   // Product snapshot — frozen at registration time
   productName      String?
   brand            String?
+  modelNumber      String
   category         String?
+  subCategory      String?
   color            String?
   productCondition String?
   imei             String?
@@ -559,10 +561,12 @@ model Warranty {
 
   // Purchase details
   purchaseDate   DateTime
-  warrantyPeriod String?
   expiryDate     DateTime
+  warrantyPeriod String?
   price          Decimal? @db.Decimal(10, 2)
   invoiceNumber  String?
+  currency       String?  @default("USD")
+  retailerName   String? // Snapshot of retailer name
   country        String?
 
   // Owner snapshot at registration time
@@ -582,6 +586,11 @@ model Warranty {
   // Status
   status    WarrantyStatus @default(ACTIVE)
   isDeleted Boolean        @default(false)
+
+  // ─── Claim Counter ───────────────────────────────────
+  // Incremented on every new claim filed
+  // Checked against WarrantyRule.maxClaimsAllowed
+  totalClaimsFiled Int @default(0)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -605,10 +614,12 @@ model Warranty {
   @@index([tokenId])
   @@index([ownerWallet])
   @@index([serialId])
+  @@index([productId])
   @@index([status])
   @@index([ownerEmail])
-  @@index([productId])
   @@index([expiryDate])
+  @@index([purchaseDate])
+  @@index([createdAt])
 }
 
 enum WarrantyStatus {
@@ -633,6 +644,10 @@ model WarrantyOwnership {
   acquiredAt DateTime @default(now())
   createdAt  DateTime @default(now())
 
+  // Transfer context — null for original registration
+  transferReason String?
+  salePrice      Decimal? @db.Decimal(10, 2)
+
   warranty Warranty @relation(fields: [warrantyId], references: [id])
   user     User     @relation(fields: [userId], references: [id])
 
@@ -640,6 +655,37 @@ model WarrantyOwnership {
   @@index([warrantyId])
   @@index([userId])
   @@index([isActive])
+}
+
+// Created for every lifecycle event — full audit trail
+model WarrantyEvent {
+  id         String @id @default(cuid())
+  warrantyId String
+
+  type        EventType
+  txHash      String? // On-chain tx if applicable
+  metadata    Json? // Any extra context as JSON
+  triggeredBy String? // userId or adminId
+
+  createdAt DateTime @default(now())
+
+  warranty Warranty @relation(fields: [warrantyId], references: [id])
+
+  @@index([warrantyId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+enum EventType {
+  REGISTERED // NFT minted — warranty created
+  CLAIM_INITIATED // User filed a claim
+  CLAIM_APPROVED // Admin approved claim
+  CLAIM_REJECTED // Admin rejected claim
+  CLAIM_RESOLVED // Admin resolved and closed claim
+  TRANSFERRED // Ownership transferred to new owner
+  EXPIRED // Warranty crossed expiry date
+  VOIDED // Admin manually voided warranty
+  DOCUMENT_UPDATED // User re-uploaded a document
 }
 
 model Transfer {
@@ -684,33 +730,4 @@ enum TransferStatus {
   COMPLETED
   CANCELLED
   REJECTED
-}
-
-model WarrantyEvent {
-  id         String    @id @default(cuid())
-  warrantyId String
-  type       EventType
-  txHash     String?
-  metadata   Json?
-  createdAt  DateTime  @default(now())
-
-  warranty Warranty @relation(fields: [warrantyId], references: [id])
-
-  @@index([warrantyId])
-  @@index([type])
-  @@index([createdAt])
-}
-
-//////////////////////////////////////////////////////
-// 📊 ENUMS
-//////////////////////////////////////////////////////
-
-enum EventType {
-  CREATED
-  TRANSFERRED
-  CLAIM_INITIATED
-  CLAIM_APPROVED
-  CLAIM_REJECTED
-  EXPIRED
-  VOIDED
 }
