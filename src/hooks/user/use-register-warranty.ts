@@ -9,42 +9,58 @@ export function useRegisterWarranty() {
   const [isRegistering, setIsRegistering] = useState(false);
   const { address } = useAuth();
 
+  /**
+   * 🚀 REGISTER WARRANTY FLOW
+   * 1. Check Auth
+   * 2. Upload assets to Cloudinary/Supabase
+   * 3. Sync with On-Chain Service via API
+   */
   const register = async (formData: any, address: string) => {
-    if (!address) {
+    // 🛡️ Ensure wallet is connected
+    const walletAddress = address || formData.ownerWallet;
+
+    if (!walletAddress) {
       throw new Error(
-        "Wallet connected address not found. Please connect your wallet.",
+        "Identity not found. Please connect your MetaMask wallet to secure this warranty on-chain.",
       );
     }
 
     setIsRegistering(true);
 
     try {
-      // ☁️ Step 1: Upload Files
+      // ☁️ Step 1: Immutable Asset Upload
+      // Using Promise.all would be faster, but sequential is safer for error tracking
       const frontUrl = formData.frontPhoto
-        ? await uploadToCloud(formData.frontPhoto, address, "assets")
+        ? await uploadToCloud(formData.frontPhoto, walletAddress, "assets")
         : null;
 
       const backUrl = formData.backPhoto
-        ? await uploadToCloud(formData.backPhoto, address, "assets")
+        ? await uploadToCloud(formData.backPhoto, walletAddress, "assets")
         : null;
 
       const invoiceUrl = formData.invoiceDoc
-        ? await uploadToCloud(formData.invoiceDoc, address, "documents")
+        ? await uploadToCloud(formData.invoiceDoc, walletAddress, "documents")
         : null;
 
       const cardUrl = formData.warrantyCard
-        ? await uploadToCloud(formData.warrantyCard, address, "documents")
+        ? await uploadToCloud(formData.warrantyCard, walletAddress, "documents")
         : null;
 
-      // 🔗 Step 2: API Call (UPDATED)
-      const data = await createWarranty({
-        walletAddress: address,
-        productId: formData.productId || "clp_default_prod_id",
+      // 🔗 Step 2: Protocol Registration
+      // We pass brandId and productId so the Controller can enrich names
+      const result = await createWarranty({
+        walletAddress: walletAddress.toLowerCase(),
 
+        // Identifiers for DB Relations
+        productId: formData.productId,
+        brandId: formData.brandId,
+
+        // User Identity Snapshot
         ownerName: formData.ownerName,
         email: formData.email,
         phone: formData.phone,
 
+        // Product Snapshot (Frontend can pass these if they exist)
         productName: formData.productName,
         brand: formData.brand,
         serialNumber: formData.serialNumber,
@@ -53,6 +69,7 @@ export function useRegisterWarranty() {
         color: formData.color,
         condition: formData.condition,
 
+        // Purchase Registry
         purchaseDate: formData.purchaseDate,
         expiryDate: formData.expiryDate,
         warrantyPeriod: formData.warrantyPeriod,
@@ -61,6 +78,7 @@ export function useRegisterWarranty() {
         invoiceNumber: formData.invoiceNumber,
         country: formData.country,
 
+        // Cloud Metadata
         metadata: {
           frontUrl,
           backUrl,
@@ -70,10 +88,10 @@ export function useRegisterWarranty() {
         },
       });
 
-      return data;
+      return result;
     } catch (err: any) {
-      console.error("Final Registration Error:", err);
-      throw err;
+      console.error("Protocol Registration Failure:", err);
+      throw new Error(err.message || "On-chain registration failed.");
     } finally {
       setIsRegistering(false);
     }

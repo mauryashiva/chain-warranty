@@ -1,5 +1,3 @@
-// src/server/services/warranty.service.ts
-
 import { prisma } from "@/server/db/prisma";
 import { blockchainService } from "@/server/blockchain/mint.service";
 
@@ -23,8 +21,8 @@ type CreateWarrantyInput = {
   purchaseDate: Date;
   expiryDate: Date;
   warrantyPeriod: string;
-  price: string; // Passed as string for Decimal precision
-  retailer?: string | null;
+  price: string;
+  retailer?: string | null; // This comes from frontend
   invoiceNumber?: string | null;
   country?: string | null;
 
@@ -33,7 +31,7 @@ type CreateWarrantyInput = {
   ownerEmail?: string | null;
   ownerPhone?: string | null;
 
-  // Supabase URLs
+  // Supabase/Cloudinary URLs
   frontPhotoUrl?: string | null;
   backPhotoUrl?: string | null;
   invoiceDocUrl?: string | null;
@@ -54,7 +52,7 @@ export const warrantyService = {
     }
 
     // 🛡️ STEP 1 — BLOCKCHAIN MINTING
-    // We do this OUTSIDE the DB transaction because blockchain is slow.
+    // We do this OUTSIDE the DB transaction because blockchain operations are slow.
     const blockchain = await blockchainService.mintWarranty(data.walletAddress);
 
     if (!blockchain.tokenId) {
@@ -62,140 +60,81 @@ export const warrantyService = {
     }
 
     // 🛡️ STEP 2 — ATOMIC DATABASE TRANSACTION
-    // This ensures data integrity: everything succeeds or nothing does.
-    return await prisma.$transaction(
-      async (tx: {
-        warranty: {
-          create: (arg0: {
-            data: {
-              tokenId: string;
-              contractAddress: string;
-              productId: string;
-              // Product Specs
-              productName: string;
-              brand: string;
-              serialNumber: string;
-              imei: string | null | undefined;
-              category: string | null | undefined;
-              color: string | null | undefined;
-              productCondition: string | null | undefined;
-              // Purchase & Financials
-              purchaseDate: Date;
-              expiryDate: Date;
-              warrantyPeriod: string;
-              // 🔥 Prisma Decimal field accepts a string.
-              // If you still see a TS error here, you MUST run 'npx prisma generate'
-              price: string;
-              retailer: string | null | undefined;
-              invoiceNumber: string | null | undefined;
-              country: string | null | undefined;
-              // Owner Snapshot
-              ownerName: string | null | undefined;
-              ownerEmail: string | null | undefined;
-              ownerPhone: string | null | undefined;
-              // Cloud Storage URLs
-              frontPhotoUrl: string | null | undefined;
-              backPhotoUrl: string | null | undefined;
-              invoiceDocUrl: string | null | undefined;
-              warrantyCardUrl: string | null | undefined;
-              status: string;
-            };
-          }) => any;
-        };
-        warrantyOwnership: {
-          create: (arg0: {
-            data: { warrantyId: any; userId: string; isActive: boolean };
-          }) => any;
-        };
-        warrantyEvent: {
-          create: (arg0: {
-            data: {
-              warrantyId: any;
-              type: string;
-              txHash: any;
-              metadata: {
-                mintedTo: string;
-                blockchainAction: string;
-                timestamp: string;
-              };
-            };
-          }) => any;
-        };
-      }) => {
-        // A. Create the Warranty Record
-        const warranty = await tx.warranty.create({
-          data: {
-            tokenId: blockchain.tokenId.toString(),
-            contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS!,
-            productId: data.productId,
+    return await prisma.$transaction(async (tx) => {
+      // A. Create the Warranty Record
+      const warranty = await tx.warranty.create({
+        data: {
+          tokenId: blockchain.tokenId.toString(),
+          contractAddress: process.env.NEXT_PUBLIC_CONTRACT_ADDRESS!,
+          productId: data.productId,
 
-            // Product Specs
-            productName: data.productName,
-            brand: data.brand,
-            serialNumber: data.serialNumber,
-            imei: data.imei,
-            category: data.category,
-            color: data.color,
-            productCondition: data.productCondition,
+          // Product Specs Snapshot
+          productName: data.productName,
+          brand: data.brand,
+          serialNumber: data.serialNumber,
+          imei: data.imei,
+          category: data.category,
+          color: data.color,
+          productCondition: data.productCondition,
 
-            // Purchase & Financials
-            purchaseDate: data.purchaseDate,
-            expiryDate: data.expiryDate,
-            warrantyPeriod: data.warrantyPeriod,
+          // Purchase & Financials
+          purchaseDate: data.purchaseDate,
+          expiryDate: data.expiryDate,
+          warrantyPeriod: data.warrantyPeriod,
+          price: data.price,
 
-            // 🔥 Prisma Decimal field accepts a string.
-            // If you still see a TS error here, you MUST run 'npx prisma generate'
-            price: data.price.toString(),
+          // 🛠️ FIX: If your schema doesn't have 'retailer',
+          // we only pass retailerId if we have one.
+          // If you want to store the text "Amazon", use invoiceNumber
+          // or add 'retailerName' to your Prisma schema.
+          invoiceNumber: data.invoiceNumber,
+          country: data.country,
 
-            retailer: data.retailer,
-            invoiceNumber: data.invoiceNumber,
-            country: data.country,
+          // Owner Snapshot
+          ownerName: data.ownerName,
+          ownerEmail: data.ownerEmail,
+          ownerPhone: data.ownerPhone,
 
-            // Owner Snapshot
-            ownerName: data.ownerName,
-            ownerEmail: data.ownerEmail,
-            ownerPhone: data.ownerPhone,
+          // Cloud Storage URLs
+          frontPhotoUrl: data.frontPhotoUrl,
+          backPhotoUrl: data.backPhotoUrl,
+          invoiceDocUrl: data.invoiceDocUrl,
+          warrantyCardUrl: data.warrantyCardUrl,
 
-            // Cloud Storage URLs
-            frontPhotoUrl: data.frontPhotoUrl,
-            backPhotoUrl: data.backPhotoUrl,
-            invoiceDocUrl: data.invoiceDocUrl,
-            warrantyCardUrl: data.warrantyCardUrl,
+          status: "ACTIVE",
+          txHash: blockchain.txHash, // Storing hash for history
+        },
+      });
 
-            status: "ACTIVE",
-          },
-        });
+      // B. Create Ownership Record
+      await tx.warrantyOwnership.create({
+        data: {
+          warrantyId: warranty.id,
+          userId: data.userId,
+          isActive: true,
+        },
+      });
 
-        // B. Create Ownership Record
-        await tx.warrantyOwnership.create({
-          data: {
-            warrantyId: warranty.id,
-            userId: data.userId,
-            isActive: true,
-          },
-        });
-
-        // C. Log the System Event
-        await tx.warrantyEvent.create({
-          data: {
-            warrantyId: warranty.id,
-            type: "CREATED",
-            txHash: blockchain.txHash,
-            metadata: {
-              mintedTo: data.walletAddress,
-              blockchainAction: "INITIAL_MINT",
-              timestamp: new Date().toISOString(),
-            },
-          },
-        });
-
-        return {
-          warranty,
+      // C. Log the System Event
+      await tx.warrantyEvent.create({
+        data: {
+          warrantyId: warranty.id,
+          type: "CREATED",
           txHash: blockchain.txHash,
-          tokenId: blockchain.tokenId,
-        };
-      },
-    );
+          metadata: {
+            mintedTo: data.walletAddress,
+            blockchainAction: "INITIAL_MINT",
+            timestamp: new Date().toISOString(),
+          },
+        },
+      });
+
+      return {
+        warranty,
+        txHash: blockchain.txHash,
+        tokenId: blockchain.tokenId,
+      };
+    });
   },
 
   async getAll() {

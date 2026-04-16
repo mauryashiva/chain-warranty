@@ -3,18 +3,28 @@
 import React, { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import {
-  ChevronDown,
   Calendar,
   DollarSign,
-  Globe,
   ArrowRight,
-  Edit3,
-  Clock,
   Package,
   ShoppingCart,
   CheckCircle2,
-  CalendarCheck, // New Icon for Expiry
+  CalendarCheck,
+  Search,
+  Loader2,
+  Hash,
+  Layers,
+  ChevronDown,
+  Edit3,
 } from "lucide-react";
+
+// Integrated your custom selectors
+import BrandSelect from "@/components/common/Form/BrandSelect";
+import ProductSelect from "@/components/common/Form/ProductSelect";
+// 🌍 Composable Location Selector
+import LocationRoot, {
+  CountryField,
+} from "@/components/common/Form/LocationSelector";
 
 const CONDITIONS = ["New", "Open box", "Refurbished", "Pre-owned"];
 const CATEGORIES = [
@@ -35,12 +45,19 @@ const PERIODS = [
   "Lifetime",
   "Other",
 ];
-const COUNTRIES = ["India", "USA", "UAE", "UK", "Singapore", "Other"];
 
 export default function StepProductInfo({ data, update, onNext }: any) {
-  const [isOtherCategory, setIsOtherCategory] = useState(false);
-  const [isOtherPeriod, setIsOtherPeriod] = useState(false);
-  const [isOtherCountry, setIsOtherCountry] = useState(false);
+  const [isCheckingSerial, setIsCheckingSerial] = useState(false);
+  const [showOtherCategory, setShowOtherCategory] = useState(false);
+
+  // 🔥 Bridge LocationSelector state with the 'update' prop
+  const locationValues = {
+    country: data.country || "",
+  };
+
+  const handleLocationChange = (field: string, value: string) => {
+    update({ [field]: value });
+  };
 
   // 🔥 LOGIC: Auto-Calculate Expiry Date
   useEffect(() => {
@@ -48,44 +65,48 @@ export default function StepProductInfo({ data, update, onNext }: any) {
       const purchase = new Date(data.purchaseDate);
       const yearsMatch = data.warrantyPeriod.match(/\d+/);
       const yearsToAdd = yearsMatch ? parseInt(yearsMatch[0]) : 1;
-
       const expiry = new Date(purchase);
       expiry.setFullYear(expiry.getFullYear() + yearsToAdd);
-
-      // Update the global state with the calculated expiryDate
-      // Formatting to YYYY-MM-DD for consistency
       const formattedExpiry = expiry.toISOString().split("T")[0];
 
       if (data.expiryDate !== formattedExpiry) {
-        update({ ...data, expiryDate: formattedExpiry });
+        update({ expiryDate: formattedExpiry });
       }
     }
   }, [data.purchaseDate, data.warrantyPeriod]);
 
-  useEffect(() => {
-    const isManualCat =
-      data.category &&
-      !CATEGORIES.filter((c) => c !== "Other electronics").includes(
-        data.category,
-      );
-    setIsOtherCategory(data.category === "Other electronics" || isManualCat);
+  // 🔥 LOGIC: Auto-Fetch Product by Serial
+  const handleSerialChange = async (serial: string) => {
+    update({ serialNumber: serial });
 
-    const isManualPeriod =
-      data.warrantyPeriod &&
-      !PERIODS.filter((p) => p !== "Other").includes(data.warrantyPeriod);
-    setIsOtherPeriod(data.warrantyPeriod === "Other" || isManualPeriod);
+    if (serial.length >= 6) {
+      setIsCheckingSerial(true);
+      try {
+        const res = await fetch(`/api/user/verify?serial=${serial}`);
+        const result = await res.json();
 
-    const isManualCountry =
-      data.country &&
-      !COUNTRIES.filter((c) => c !== "Other").includes(data.country);
-    setIsOtherCountry(data.country === "Other" || isManualCountry);
-  }, [data.category, data.warrantyPeriod, data.country]);
+        if (result.success && result.data) {
+          update({
+            brandId: result.data.brandId,
+            productId: result.data.id,
+            productName: result.data.name,
+            brand: result.data.brand?.name,
+          });
+        }
+      } catch (err) {
+        console.log("No matching product found in registry.");
+      } finally {
+        setIsCheckingSerial(false);
+      }
+    }
+  };
 
   const inputClasses =
-    "w-full px-5 py-4 rounded-xl border border-gray-200 bg-white text-sm font-medium outline-none transition-all duration-200 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 dark:focus:border-blue-500";
-
+    "w-full px-5 py-4 rounded-xl border border-gray-200 bg-white text-sm font-medium outline-none transition-all duration-200 focus:border-blue-600 focus:ring-4 focus:ring-blue-600/5 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 dark:focus:border-blue-500 h-[52px] flex items-center";
   const labelClasses =
-    "text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-2.5 block ml-1";
+    "text-[10px] font-black uppercase tracking-widest text-slate-800 dark:text-slate-200 mb-2.5 block ml-1";
+  const secondaryText =
+    "text-[10px] font-bold uppercase tracking-tight text-slate-800 dark:text-slate-200 opacity-60 mt-1.5 ml-1";
 
   return (
     <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -102,35 +123,48 @@ export default function StepProductInfo({ data, update, onNext }: any) {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-1">
-            <label className={labelClasses}>Product name *</label>
-            <input
-              value={data.productName}
-              onChange={(e) => update({ ...data, productName: e.target.value })}
-              placeholder="e.g. Sony WH-1000XM5"
-              className={inputClasses}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className={labelClasses}>Brand *</label>
-            <input
-              value={data.brand}
-              onChange={(e) => update({ ...data, brand: e.target.value })}
-              placeholder="e.g. Sony"
-              className={inputClasses}
-            />
-          </div>
-
-          <div className="space-y-1">
+          <div className="space-y-1 md:col-span-2">
             <label className={labelClasses}>Serial number *</label>
-            <input
-              value={data.serialNumber}
-              onChange={(e) =>
-                update({ ...data, serialNumber: e.target.value })
-              }
-              placeholder="e.g. SN-2024-XXXXX"
-              className={inputClasses}
+            <div className="relative">
+              <input
+                value={data.serialNumber}
+                onChange={(e) => handleSerialChange(e.target.value)}
+                placeholder="Enter Serial to auto-fetch details..."
+                className={cn(
+                  inputClasses,
+                  "pr-12 border-blue-100 dark:border-blue-900/30",
+                )}
+              />
+              <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                {isCheckingSerial ? (
+                  <Loader2 className="animate-spin text-blue-600" size={18} />
+                ) : data.productId ? (
+                  <CheckCircle2 className="text-emerald-500" size={18} />
+                ) : (
+                  <Search className="text-gray-300" size={18} />
+                )}
+              </div>
+            </div>
+            <p className={secondaryText}>
+              Primary identifier for on-chain registry
+            </p>
+          </div>
+
+          <div className="space-y-1">
+            <label className={labelClasses}>Select Brand *</label>
+            <BrandSelect
+              value={data.brandId}
+              onChange={(val: string) => update({ brandId: val })}
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className={labelClasses}>Product / Model *</label>
+            <ProductSelect
+              value={data.productId}
+              brandId={data.brandId}
+              disabled={!data.brandId}
+              onChange={(val: string) => update({ productId: val })}
             />
           </div>
 
@@ -138,74 +172,88 @@ export default function StepProductInfo({ data, update, onNext }: any) {
             <label className={labelClasses}>IMEI / Model number</label>
             <input
               value={data.imei}
-              onChange={(e) => update({ ...data, imei: e.target.value })}
+              onChange={(e) => update({ imei: e.target.value })}
               placeholder="e.g. 354688110984156"
               className={inputClasses}
             />
-          </div>
-
-          <div className="space-y-1 md:col-span-1">
-            <label className={labelClasses}>Category *</label>
-            <div className="flex flex-col gap-3">
-              <div className="relative">
-                <select
-                  value={isOtherCategory ? "Other electronics" : data.category}
-                  onChange={(e) =>
-                    update({ ...data, category: e.target.value })
-                  }
-                  className={cn(
-                    inputClasses,
-                    "appearance-none pr-12 cursor-pointer",
-                  )}
-                >
-                  <option value="" disabled>
-                    Select a category
-                  </option>
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  size={18}
-                />
-              </div>
-              {isOtherCategory && (
-                <div className="relative animate-in zoom-in-95 duration-300">
-                  <input
-                    autoFocus
-                    value={
-                      data.category === "Other electronics" ? "" : data.category
-                    }
-                    onChange={(e) =>
-                      update({ ...data, category: e.target.value })
-                    }
-                    placeholder="Specify product type..."
-                    className={cn(
-                      inputClasses,
-                      "pl-11 border-blue-200 bg-blue-50/30 dark:bg-blue-500/5 dark:border-blue-500/20",
-                    )}
-                  />
-                  <Edit3
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500"
-                    size={16}
-                  />
-                </div>
-              )}
-            </div>
           </div>
 
           <div className="space-y-1">
             <label className={labelClasses}>Color / Variant</label>
             <input
               value={data.color}
-              onChange={(e) => update({ ...data, color: e.target.value })}
+              onChange={(e) => update({ color: e.target.value })}
               placeholder="e.g. Midnight Black"
               className={inputClasses}
             />
           </div>
+
+          {/* 🔥 DROPDOWN CATEGORY SECTION */}
+          <div className="space-y-1 md:col-span-1">
+            <label className={labelClasses}>Product Category *</label>
+            <div className="relative">
+              <select
+                value={
+                  CATEGORIES.includes(data.category)
+                    ? data.category
+                    : data.category
+                      ? "Other electronics"
+                      : ""
+                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val === "Other electronics") {
+                    setShowOtherCategory(true);
+                    update({ category: "" }); // Reset to allow typing
+                  } else {
+                    setShowOtherCategory(false);
+                    update({ category: val });
+                  }
+                }}
+                className={cn(
+                  inputClasses,
+                  "appearance-none cursor-pointer pr-10",
+                )}
+              >
+                <option value="" disabled>
+                  Select a category
+                </option>
+                {CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                size={16}
+              />
+            </div>
+          </div>
+
+          {/* 🔥 "OTHER" INPUT FIELD (Conditional) */}
+          {(showOtherCategory ||
+            (data.category && !CATEGORIES.includes(data.category))) && (
+            <div className="space-y-1 md:col-span-1 animate-in slide-in-from-left-2 duration-300">
+              <label className={labelClasses}>Specify Category *</label>
+              <div className="relative">
+                <Edit3
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500"
+                  size={16}
+                />
+                <input
+                  autoFocus
+                  value={data.category}
+                  onChange={(e) => update({ category: e.target.value })}
+                  placeholder="Type category name..."
+                  className={cn(
+                    inputClasses,
+                    "pl-12 border-blue-200 dark:border-blue-900/50",
+                  )}
+                />
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
@@ -228,13 +276,11 @@ export default function StepProductInfo({ data, update, onNext }: any) {
               <input
                 type="date"
                 value={data.purchaseDate}
-                onChange={(e) =>
-                  update({ ...data, purchaseDate: e.target.value })
-                }
+                onChange={(e) => update({ purchaseDate: e.target.value })}
                 className={cn(inputClasses, "pr-12")}
               />
               <Calendar
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
                 size={18}
               />
             </div>
@@ -242,57 +288,30 @@ export default function StepProductInfo({ data, update, onNext }: any) {
 
           <div className="space-y-1">
             <label className={labelClasses}>Warranty period</label>
-            <div className="flex flex-col gap-3">
-              <div className="relative">
-                <select
-                  value={isOtherPeriod ? "Other" : data.warrantyPeriod}
-                  onChange={(e) =>
-                    update({ ...data, warrantyPeriod: e.target.value })
-                  }
-                  className={cn(
-                    inputClasses,
-                    "appearance-none pr-12 cursor-pointer",
-                  )}
-                >
-                  {PERIODS.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  size={18}
-                />
-              </div>
-              {isOtherPeriod && (
-                <div className="relative animate-in zoom-in-95 duration-300">
-                  <input
-                    autoFocus
-                    value={
-                      data.warrantyPeriod === "Other" ? "" : data.warrantyPeriod
-                    }
-                    onChange={(e) =>
-                      update({ ...data, warrantyPeriod: e.target.value })
-                    }
-                    placeholder="e.g. 6 Months"
-                    className={cn(
-                      inputClasses,
-                      "pl-11 border-blue-200 bg-blue-50/30 dark:bg-blue-500/5 dark:border-blue-500/20",
-                    )}
-                  />
-                  <Clock
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500"
-                    size={16}
-                  />
-                </div>
-              )}
+            <div className="relative">
+              <select
+                value={data.warrantyPeriod}
+                onChange={(e) => update({ warrantyPeriod: e.target.value })}
+                className={cn(
+                  inputClasses,
+                  "appearance-none cursor-pointer pr-10",
+                )}
+              >
+                {PERIODS.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+                size={16}
+              />
             </div>
           </div>
 
-          {/* 🔥 NEW: CALCULATED EXPIRY DATE (Read Only for UI Clarity) */}
           <div className="space-y-1">
-            <label className={labelClasses}>Expiry Date (Calculated)</label>
+            <label className={labelClasses}>Expiry (Calculated)</label>
             <div className="relative">
               <input
                 readOnly
@@ -316,7 +335,7 @@ export default function StepProductInfo({ data, update, onNext }: any) {
                 type="number"
                 step="0.01"
                 value={data.price}
-                onChange={(e) => update({ ...data, price: e.target.value })}
+                onChange={(e) => update({ price: e.target.value })}
                 placeholder="0.00"
                 className={cn(inputClasses, "pl-12")}
               />
@@ -331,69 +350,31 @@ export default function StepProductInfo({ data, update, onNext }: any) {
             <label className={labelClasses}>Retailer</label>
             <input
               value={data.retailer}
-              onChange={(e) => update({ ...data, retailer: e.target.value })}
+              onChange={(e) => update({ retailer: e.target.value })}
               placeholder="e.g. Amazon"
               className={inputClasses}
             />
           </div>
 
           <div className="space-y-1">
-            <label className={labelClasses}>Invoice number</label>
-            <input
-              value={data.invoiceNumber}
-              onChange={(e) =>
-                update({ ...data, invoiceNumber: e.target.value })
-              }
-              placeholder="e.g. INV-9923"
-              className={inputClasses}
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className={labelClasses}>Country</label>
-            <div className="flex flex-col gap-3">
-              <div className="relative">
-                <select
-                  value={isOtherCountry ? "Other" : data.country}
-                  onChange={(e) => update({ ...data, country: e.target.value })}
-                  className={cn(
-                    inputClasses,
-                    "appearance-none pr-12 cursor-pointer",
-                  )}
-                >
-                  {COUNTRIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-                <Globe
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  size={18}
-                />
-              </div>
-              {isOtherCountry && (
-                <div className="relative animate-in zoom-in-95 duration-300">
-                  <input
-                    autoFocus
-                    value={data.country === "Other" ? "" : data.country}
-                    onChange={(e) =>
-                      update({ ...data, country: e.target.value })
-                    }
-                    placeholder="Enter country..."
-                    className={cn(
-                      inputClasses,
-                      "pl-11 border-blue-200 bg-blue-50/30 dark:bg-blue-500/5 dark:border-blue-500/20",
-                    )}
-                  />
-                  <Edit3
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500"
-                    size={16}
-                  />
-                </div>
-              )}
+            <label className={labelClasses}>Invoice Number</label>
+            <div className="relative">
+              <input
+                value={data.invoiceNumber}
+                onChange={(e) => update({ invoiceNumber: e.target.value })}
+                placeholder="INV-2024-001"
+                className={cn(inputClasses, "pl-12")}
+              />
+              <Hash
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                size={16}
+              />
             </div>
           </div>
+
+          <LocationRoot values={locationValues} onChange={handleLocationChange}>
+            <CountryField label="Country *" className="lg:col-span-1" />
+          </LocationRoot>
         </div>
       </section>
 
@@ -407,7 +388,7 @@ export default function StepProductInfo({ data, update, onNext }: any) {
             <button
               key={c}
               type="button"
-              onClick={() => update({ ...data, condition: c })}
+              onClick={() => update({ condition: c })}
               className={cn(
                 "group relative px-8 py-4 rounded-2xl text-[13px] font-black tracking-tight transition-all border active:scale-95 flex items-center gap-3 overflow-hidden",
                 data.condition === c
@@ -431,7 +412,15 @@ export default function StepProductInfo({ data, update, onNext }: any) {
       <div className="flex justify-end pt-4">
         <button
           onClick={onNext}
-          className="group flex items-center gap-4 bg-blue-600 text-white px-10 py-5 rounded-[20px] font-black text-xs tracking-widest hover:bg-blue-700 transition-all shadow-2xl shadow-blue-600/20 active:scale-[0.98]"
+          disabled={
+            !data.brandId ||
+            !data.productId ||
+            !data.serialNumber ||
+            !data.purchaseDate ||
+            !data.category ||
+            !data.country
+          }
+          className="group flex items-center gap-4 bg-blue-600 text-white px-10 py-5 rounded-[20px] font-black text-xs tracking-widest hover:bg-blue-700 transition-all shadow-2xl shadow-blue-600/20 active:scale-[0.98] disabled:opacity-50 disabled:grayscale"
         >
           CONTINUE TO UPLOAD
           <ArrowRight

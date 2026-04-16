@@ -23,11 +23,11 @@ export default function MintingPanel() {
     expiry.setFullYear(expiry.getFullYear() + parseInt(formData.expiryYears));
 
     try {
-      const result = await executeMint(
+      const result = (await executeMint(
         formData.walletAddress,
         formData.productId,
         expiry.toISOString(),
-      );
+      )) as { txHash: string; warranty: { tokenId: string } };
 
       setTxHash(result.txHash);
       setMintedId(result.warranty.tokenId);

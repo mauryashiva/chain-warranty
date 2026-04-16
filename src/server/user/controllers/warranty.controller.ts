@@ -1,24 +1,40 @@
+import { NextResponse } from "next/server";
 import { warrantyService } from "@/server/user/services/warranty.service";
 import { walletService } from "@/server/user/services/wallet.service";
+import { prisma } from "@/server/db/prisma";
 
 /**
  * Create warranty:
  * - Find/create user via wallet
- * - Validate all product & purchase fields
+ * - Enrich missing Brand/Product names via IDs
  * - Mint NFT on blockchain (handled in service)
- * - Store full warranty details in DB with high precision
+ * - Store full warranty details in DB
  */
 export async function createWarranty(req: Request) {
   try {
     const body = await req.json();
 
-    // 🛡️ 1. DEFENSIVE VALIDATION
-    // Ensure the core data required for a legal warranty exists
+    // 🛡️ 1. DATA ENRICHMENT (New Logic)
+    // If frontend sends IDs instead of names, we fetch names from DB
+    let enrichedBrand = body.brand;
+    let enrichedProductName = body.productName;
+
+    if (!enrichedProductName || !enrichedBrand) {
+      const productData = await prisma.product.findUnique({
+        where: { id: body.productId },
+        include: { brand: true },
+      });
+
+      if (productData) {
+        enrichedProductName = productData.name;
+        enrichedBrand = productData.brand.name;
+      }
+    }
+
+    // 🛡️ 2. DEFENSIVE VALIDATION (Updated to check enriched values)
     const requiredFields = [
       "walletAddress",
       "productId",
-      "productName",
-      "brand",
       "serialNumber",
       "purchaseDate",
       "warrantyPeriod",
@@ -26,18 +42,28 @@ export async function createWarranty(req: Request) {
 
     for (const field of requiredFields) {
       if (!body[field]) {
-        return Response.json(
+        return NextResponse.json(
           { success: false, message: `Missing required field: ${field}` },
           { status: 400 },
         );
       }
     }
 
-    // 🛡️ 2. DATE TRANSFORMATION & EXPIRY LOGIC
+    // Explicit check for the names we just tried to enrich
+    if (!enrichedBrand || !enrichedProductName) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Missing required field: brand or productName",
+        },
+        { status: 400 },
+      );
+    }
+
+    // 🛡️ 3. DATE TRANSFORMATION & EXPIRY LOGIC
     const purchaseDate = new Date(body.purchaseDate);
     let expiryDate = body.expiryDate ? new Date(body.expiryDate) : null;
 
-    // Fallback: If expiry is not provided, calculate based on period (e.g., "2 years")
     if (!expiryDate) {
       const yearsMatch = body.warrantyPeriod.match(/\d+/);
       const years = yearsMatch ? parseInt(yearsMatch[0]) : 1;
@@ -52,14 +78,13 @@ export async function createWarranty(req: Request) {
 
     // 🔥 STEP 2 — Create warranty (Blockchain + DB Mapping)
     const result = await warrantyService.create({
-      // Identifiers
       userId: user.id,
       walletAddress: body.walletAddress,
       productId: body.productId,
 
-      // Product Information
-      productName: body.productName,
-      brand: body.brand,
+      // Product Information (Using enriched names)
+      productName: enrichedProductName,
+      brand: enrichedBrand,
       serialNumber: body.serialNumber,
       imei: body.imei || null,
       category: body.category || null,
@@ -90,13 +115,13 @@ export async function createWarranty(req: Request) {
       warrantyCardUrl: body.metadata?.cardUrl || null,
     });
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data: result,
     });
   } catch (error: any) {
     console.error("Controller Error [createWarranty]:", error);
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         message:
@@ -114,13 +139,13 @@ export async function getAllWarranties() {
   try {
     const data = await warrantyService.getAll();
 
-    return Response.json({
+    return NextResponse.json({
       success: true,
       data,
     });
   } catch (error: any) {
     console.error("Controller Error [getAllWarranties]:", error);
-    return Response.json(
+    return NextResponse.json(
       {
         success: false,
         message: error.message || "Failed to fetch warranties",

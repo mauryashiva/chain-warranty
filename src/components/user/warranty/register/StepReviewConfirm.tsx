@@ -13,11 +13,15 @@ import {
 } from "lucide-react";
 import { cn, formatWallet } from "@/lib/utils";
 import { useRegisterWarranty } from "@/hooks/user/use-register-warranty";
-import { useAuth } from "@/context/AuthContext"; // 🔥 Added to fetch wallet automatically
+import { useAuth } from "@/context/AuthContext";
+// 🌍 Import Composable Location Components
+import LocationRoot, {
+  PhoneField,
+} from "@/components/common/Form/LocationSelector";
 
 export default function StepReviewConfirm({ data, update, onBack }: any) {
   const { register, isRegistering } = useRegisterWarranty();
-  const { address } = useAuth(); // 🔥 Get the connected wallet address
+  const { address } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   // 🔥 Industry Standard: Auto-sync the connected wallet to the form data
@@ -27,10 +31,19 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
     }
   }, [address]);
 
+  // 🌍 Bridge LocationSelector state with the 'update' prop
+  const locationValues = {
+    phoneCode: data.phoneCode || "+91",
+    phoneNumber: data.phoneNumber || "",
+  };
+
+  const handleLocationChange = (field: string, value: string) => {
+    update({ [field]: value });
+  };
+
   const handleFinalMint = async () => {
     try {
       setError(null);
-      // Ensure we have a wallet address before proceeding
       if (!address) {
         throw new Error("No wallet connected. Please connect MetaMask.");
       }
@@ -97,59 +110,49 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
           Owner Information
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {[
-            {
-              label: "Owner full name *",
-              value: data.ownerName,
-              key: "ownerName",
-              placeholder: "e.g. Arjun Mehta",
-            },
-            {
-              label: "Owner wallet address *",
-              value: formatWallet(data.ownerWallet),
-              key: "ownerWallet",
-              placeholder: "Connect wallet to populate...",
-              mono: true,
-              readOnly: true, // 🔥 Industry Standard: Prevent manual tampering
-            },
-            {
-              label: "Email address",
-              value: data.email,
-              key: "email",
-              placeholder: "owner@email.com",
-            },
-            {
-              label: "Phone number",
-              value: data.phone,
-              key: "phone",
-              placeholder: "+91 98765 43210",
-            },
-          ].map((field) => (
-            <div key={field.key} className="space-y-2">
-              <label className="text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest">
-                {field.label}
-              </label>
-              <input
-                disabled={isRegistering}
-                readOnly={field.readOnly}
-                title={
-                  field.key === "ownerWallet" ? data.ownerWallet : undefined
-                }
-                value={field.value || ""}
-                onChange={(e) =>
-                  update({ ...data, [field.key]: e.target.value })
-                }
-                placeholder={field.placeholder}
-                className={cn(
-                  "w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-[13px] font-bold outline-none transition duration-200",
-                  "focus:border-blue-600 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 disabled:opacity-50",
-                  field.readOnly &&
-                    "bg-gray-50 dark:bg-gray-950/50 cursor-not-allowed border-dashed",
-                  field.mono && "font-mono text-[11px]",
-                )}
-              />
-            </div>
-          ))}
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest">
+              Owner full name *
+            </label>
+            <input
+              disabled={isRegistering}
+              value={data.ownerName || ""}
+              onChange={(e) => update({ ownerName: e.target.value })}
+              placeholder="e.g. Arjun Mehta"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-[13px] font-bold outline-none transition duration-200 focus:border-blue-600 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 disabled:opacity-50 h-13"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest">
+              Owner wallet address *
+            </label>
+            <input
+              readOnly
+              title={data.ownerWallet}
+              value={formatWallet(data.ownerWallet) || ""}
+              placeholder="Connect wallet to populate..."
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 dark:bg-gray-950/50 text-[11px] font-mono font-bold outline-none cursor-not-allowed border-dashed dark:text-gray-100 h-13"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest">
+              Email address
+            </label>
+            <input
+              disabled={isRegistering}
+              value={data.email || ""}
+              onChange={(e) => update({ email: e.target.value })}
+              placeholder="owner@email.com"
+              className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-white text-[13px] font-bold outline-none transition duration-200 focus:border-blue-600 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 disabled:opacity-50 h-13"
+            />
+          </div>
+
+          {/* 🌍 Phone field with LocationSelector */}
+          <LocationRoot values={locationValues} onChange={handleLocationChange}>
+            <PhoneField label="Phone Number" className="md:col-span-1" />
+          </LocationRoot>
         </div>
       </section>
 
@@ -321,11 +324,7 @@ export default function StepReviewConfirm({ data, update, onBack }: any) {
           ) : (
             <>
               MINT WARRANTY NFT ON BLOCKCHAIN
-              <ShieldCheck
-                size={18}
-                strokeWidth={3}
-                className="text-blue-500"
-              />
+              <ShieldCheck size={18} strokeWidth={3} className="text-blue-50" />
             </>
           )}
         </button>
