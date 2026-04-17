@@ -110,7 +110,7 @@ export const SerialController = {
    * 🏗️ Create/Bulk Upload Serials
    */
   async createSerials(data: {
-    serials: string[];
+    serials: Array<{ serialNumber: string; imei?: string }>;
     productId: string;
     batchId?: string;
     manufactureDate?: string;
@@ -123,9 +123,51 @@ export const SerialController = {
       duplicates: [] as string[],
     };
 
-    for (const sn of data.serials) {
+    const product = await prisma.product.findUnique({
+      where: { id: data.productId },
+    });
+
+    if (!product) {
+      throw new Error("Product not found for serial upload.");
+    }
+
+    const generalSerialRegex = /^[A-Za-z0-9-]+$/;
+
+    for (const row of data.serials) {
       try {
-        const cleanSN = sn.trim().toUpperCase();
+        const cleanSN = row.serialNumber.trim().toUpperCase();
+        const cleanImei = row.imei?.trim() || null;
+
+        if (!generalSerialRegex.test(cleanSN)) {
+          results.failed++;
+          results.duplicates.push(cleanSN);
+          continue;
+        }
+
+        if (product.identificationType === "SERIAL_IMEI" && !cleanImei) {
+          results.failed++;
+          results.duplicates.push(cleanSN);
+          continue;
+        }
+
+        if (product.identificationType === "SERIAL_IMEI" && cleanImei) {
+          const imeiExists = await prisma.serial.findUnique({
+            where: { imei: cleanImei },
+          });
+
+          if (imeiExists) {
+            results.failed++;
+            results.duplicates.push(cleanSN);
+            continue;
+          }
+
+          const imeiRegex = /^\d{15}$/;
+          if (!imeiRegex.test(cleanImei)) {
+            results.failed++;
+            results.duplicates.push(cleanSN);
+            continue;
+          }
+        }
 
         const existing = await prisma.serial.findUnique({
           where: { serialNumber: cleanSN },
@@ -150,12 +192,13 @@ export const SerialController = {
               ? new Date(data.dispatchDate)
               : null,
             status: "UNREGISTERED",
+            imei: cleanImei,
           },
         });
 
         results.success++;
       } catch (err) {
-        console.error(`Error creating serial ${sn}:`, err);
+        console.error(`Error creating serial ${row.serialNumber}:`, err);
         results.failed++;
       }
     }

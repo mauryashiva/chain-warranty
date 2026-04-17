@@ -62,14 +62,24 @@ export const warrantyService = {
     return product;
   },
 
-  async validateSerial(serialNumber: string, productId: string) {
+  async validateSerial(
+    serialNumber: string,
+    product: {
+      id: string;
+      identificationType: "SERIAL" | "SERIAL_IMEI";
+      serialRegex?: string | null;
+    },
+    imei: string | null,
+  ) {
+    const cleanSerial = serialNumber.trim().toUpperCase();
     const serial = await prisma.serial.findUnique({
-      where: { serialNumber },
+      where: { serialNumber: cleanSerial },
     });
+
     if (!serial) {
       throw new Error("SERIAL_NOT_FOUND");
     }
-    if (serial.productId !== productId) {
+    if (serial.productId !== product.id) {
       throw new Error("SERIAL_DOES_NOT_BELONG_TO_PRODUCT");
     }
     if (serial.status === "REGISTERED") {
@@ -78,6 +88,42 @@ export const warrantyService = {
     if (serial.status === "FLAGGED" || serial.status === "BLOCKED") {
       throw new Error("SERIAL_FLAGGED_OR_BLOCKED");
     }
+
+    const generalSerialRegex = /^[A-Za-z0-9-]+$/;
+    if (!generalSerialRegex.test(cleanSerial)) {
+      throw new Error("SERIAL_INVALID_FORMAT");
+    }
+
+    if (product.serialRegex) {
+      try {
+        const customRegex = new RegExp(product.serialRegex);
+        if (!customRegex.test(cleanSerial)) {
+          throw new Error("SERIAL_DOES_NOT_MATCH_PRODUCT_PATTERN");
+        }
+      } catch (error) {
+        throw new Error("INVALID_PRODUCT_SERIAL_REGEX");
+      }
+    }
+
+    if (product.identificationType === "SERIAL_IMEI") {
+      const cleanImei = imei?.trim() || "";
+      if (!cleanImei) {
+        throw new Error("IMEI_REQUIRED_FOR_PRODUCT");
+      }
+
+      const imeiRegex = /^\d{15}$/;
+      if (!imeiRegex.test(cleanImei)) {
+        throw new Error("IMEI_INVALID_FORMAT");
+      }
+
+      if (!serial.imei) {
+        throw new Error("IMEI_NOT_REGISTERED_FOR_DEVICE");
+      }
+      if (serial.imei !== cleanImei) {
+        throw new Error("IMEI_DOES_NOT_MATCH_SERIAL");
+      }
+    }
+
     return serial;
   },
 
@@ -90,28 +136,34 @@ export const warrantyService = {
     }
   },
 
-  async validateIMEI(imei: string | null, serialRegex: string | null) {
-    if (imei) {
-      // IMEI should be exactly 15 digits
-      const imeiRegex = /^\d{15}$/;
-      if (!imeiRegex.test(imei)) {
-        throw new Error("IMEI_INVALID_FORMAT");
-      }
-    }
-  },
-
-  async validatePurchaseDate(purchaseDate: Date) {
+  async validatePurchaseDate(
+    purchaseDate: Date,
+    serial: { manufactureDate?: Date | null; dispatchDate?: Date | null },
+    product: { launchDate?: Date | null },
+  ) {
     const now = new Date();
     if (purchaseDate > now) {
       throw new Error("PURCHASE_DATE_FUTURE");
     }
+
+    if (serial.manufactureDate && purchaseDate < serial.manufactureDate) {
+      throw new Error("PURCHASE_BEFORE_MANUFACTURE");
+    }
+    if (serial.dispatchDate && purchaseDate < serial.dispatchDate) {
+      throw new Error("PURCHASE_BEFORE_DISPATCH");
+    }
+    if (product.launchDate && purchaseDate < product.launchDate) {
+      throw new Error("PURCHASE_BEFORE_LAUNCH");
+    }
+
     const globalConfig = await prisma.globalConfig.findUnique({
       where: { singleton: "global" },
     });
     const maxDays = globalConfig?.maxDaysToRegister || 30;
-    const maxDate = new Date();
-    maxDate.setDate(maxDate.getDate() - maxDays);
-    if (purchaseDate < maxDate) {
+    const oldestAllowed = new Date();
+    oldestAllowed.setDate(oldestAllowed.getDate() - maxDays);
+
+    if (purchaseDate < oldestAllowed) {
       throw new Error("PURCHASE_DATE_TOO_OLD");
     }
   },
@@ -160,8 +212,12 @@ export const warrantyService = {
     // 🛡️ STEP 2 — Validate Product
     const product = await this.validateProduct(data.productId, brand.id);
 
-    // 🛡️ STEP 3 — Validate Serial
-    const serial = await this.validateSerial(data.serialNumber, product.id);
+    // 🛡️ STEP 3 — Validate Serial and IMEI rules for this product
+    const serial = await this.validateSerial(
+      data.serialNumber,
+      product,
+      data.imei || null,
+    );
 
     // 🛡️ STEP 4 — Validate Model Number
     await this.validateModelNumber(
@@ -169,11 +225,8 @@ export const warrantyService = {
       product.modelNumber,
     );
 
-    // 🛡️ STEP 5 — Validate IMEI
-    await this.validateIMEI(data.imei || null, product.serialRegex);
-
-    // 🛡️ STEP 6 — Validate Purchase Date
-    await this.validatePurchaseDate(data.purchaseDate);
+    // 🛡️ STEP 5 — Validate Purchase Date against device and product timeline
+    await this.validatePurchaseDate(data.purchaseDate, serial, product);
 
     // 🛡️ STEP 7 — Calculate Expiry Date
     const expiryDate = await this.calculateExpiryDate(

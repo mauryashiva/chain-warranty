@@ -55,7 +55,7 @@ export default function PermissionMatrix() {
       </h3>
       <div className="bg-white dark:bg-gray-950 border border-slate-100 dark:border-gray-800 rounded-[3rem] p-10 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left min-w-[800px]">
+          <table className="w-full text-left min-w-200">
             <thead>
               <tr className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-800 dark:text-slate-200 border-b border-slate-100 dark:border-gray-900">
                 <th className="pb-8 pl-4">Permission Node</th>

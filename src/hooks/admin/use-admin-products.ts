@@ -31,6 +31,7 @@ export interface Product {
   serialRegex?: string;
   description?: string;
   termsUrl?: string;
+  identificationType?: "SERIAL" | "SERIAL_IMEI";
   status: "ACTIVE" | "INACTIVE" | "DISCONTINUED";
   _count?: {
     serials: number;

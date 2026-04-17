@@ -45,20 +45,41 @@ export default function BulkUploadSerialsModal({
   const [entryMode, setEntryMode] = useState<"file" | "manual">("file");
   const [isUploading, setIsUploading] = useState(false);
 
+  const { products } = useAdminProducts();
+  const selectedProductData = products?.find(
+    (product: any) => product.id === selectedProduct,
+  );
+  const requiresImei =
+    selectedProductData?.identificationType === "SERIAL_IMEI";
+
   const { uploadSerials } = useAdminSerials();
 
   useClickOutside(modalRef, onClose);
 
   // --- CSV Parser ---
-  const parseCSV = (file: File): Promise<string[]> => {
+  const parseCSV = (
+    file: File,
+  ): Promise<Array<{ serialNumber: string; imei?: string }>> => {
     return new Promise((resolve) => {
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
           const serials = results.data
-            .map((row: any) => row.serial_number)
-            .filter(Boolean);
+            .map((row: any) => {
+              const serial = (
+                row.serial_number ||
+                row.serial ||
+                row.serialNumber
+              )?.trim();
+              const rawImei = row.imei || row.IMEI;
+              const imei = rawImei ? rawImei.toString().trim() : undefined;
+              if (!serial) return null;
+              return requiresImei
+                ? { serialNumber: serial, imei }
+                : { serialNumber: serial };
+            })
+            .filter(Boolean) as Array<{ serialNumber: string; imei?: string }>;
           resolve(serials);
         },
       });
@@ -69,24 +90,34 @@ export default function BulkUploadSerialsModal({
   const handleSubmit = async () => {
     try {
       setIsUploading(true);
-      let serialList: string[] = [];
+      let serialItems: Array<{ serialNumber: string; imei?: string }> = [];
 
       if (entryMode === "file" && file) {
-        serialList = await parseCSV(file);
+        serialItems = await parseCSV(file);
       } else {
-        serialList = manualSerials
+        serialItems = manualSerials
           .split("\n")
-          .map((s) => s.trim())
-          .filter((s) => s.length > 0);
+          .map((line) => line.trim())
+          .filter((line) => line.length > 0)
+          .map((line) => {
+            if (requiresImei) {
+              const [serial, imei] = line
+                .split(/[|,]/)
+                .map((value) => value.trim());
+              return { serialNumber: serial, imei };
+            }
+
+            return { serialNumber: line };
+          });
       }
 
-      if (serialList.length === 0) {
+      if (serialItems.length === 0) {
         alert("No valid serial numbers found.");
         return;
       }
 
       await uploadSerials({
-        serials: serialList,
+        serials: serialItems,
         productId: selectedProduct,
         batchId: batchId,
         manufactureDate: mfgDate,
@@ -144,12 +175,12 @@ export default function BulkUploadSerialsModal({
     (file !== null || manualSerials.trim().length > 0);
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-100 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md animate-in fade-in duration-200">
       <div
         ref={modalRef}
         className="relative w-full max-w-5xl bg-white dark:bg-gray-900 rounded-[3rem] shadow-2xl border border-slate-100 dark:border-gray-800 flex flex-col max-h-[90vh] overflow-hidden animate-in zoom-in-95 duration-200"
       >
-        <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 via-indigo-500 to-blue-600 z-50" />
+        <div className="absolute top-0 left-0 right-0 h-1.5 bg-linear-to-r from-blue-600 via-indigo-500 to-blue-600 z-50" />
 
         {/* Header - Sticky */}
         <div className="px-10 py-8 border-b border-slate-50 dark:border-gray-800/60 flex items-center justify-between shrink-0 bg-white dark:bg-gray-900 z-40">
@@ -217,7 +248,7 @@ export default function BulkUploadSerialsModal({
                   onChange={(e) => setMfgDate(e.target.value)}
                   className={cn(
                     inputClasses,
-                    "pl-12 [color-scheme:light] dark:[color-scheme:dark]",
+                    "pl-12 scheme-light dark:scheme-dark",
                   )}
                 />
               </div>
@@ -236,7 +267,7 @@ export default function BulkUploadSerialsModal({
                   onChange={(e) => setDispatchDate(e.target.value)}
                   className={cn(
                     inputClasses,
-                    "pl-12 [color-scheme:light] dark:[color-scheme:dark]",
+                    "pl-12 scheme-light dark:scheme-dark",
                   )}
                 />
               </div>
@@ -326,14 +357,18 @@ export default function BulkUploadSerialsModal({
                   <textarea
                     value={manualSerials}
                     onChange={(e) => setManualSerials(e.target.value)}
-                    placeholder="SN-2024-001&#10;SN-2024-002"
+                    placeholder={
+                      requiresImei
+                        ? "SERIAL123|123456789012345\nSERIAL456|234567890123456"
+                        : "SN-2024-001\nSN-2024-002"
+                    }
                     className={cn(
                       inputClasses,
                       "min-h-48 py-6 px-6 resize-none font-mono text-xs leading-relaxed",
                     )}
                   />
                   <div className="absolute top-4 right-4 text-[9px] font-black text-slate-400 uppercase">
-                    One per line
+                    {requiresImei ? "Serial|IMEI per line" : "One per line"}
                   </div>
                 </div>
               )}

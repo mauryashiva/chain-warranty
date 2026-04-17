@@ -97,7 +97,7 @@ export function useAdminSerials() {
 
   // --- 4. Bulk Upload ---
   const uploadSerials = async (payload: {
-    serials: string[];
+    serials: Array<{ serialNumber: string; imei?: string }>;
     productId: string;
     batchId?: string;
     retailerId?: string;

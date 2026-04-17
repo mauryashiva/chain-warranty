@@ -168,13 +168,14 @@ enum BrandStatus {
 }
 
 model Product {
-  id          String  @id @default(cuid())
-  name        String
-  modelNumber String
-  description String? @db.Text
-  category    String?
-  subCategory String?
-  sku         String? @unique
+  id                 String             @id @default(cuid())
+  name               String
+  identificationType IdentificationType @default(SERIAL)
+  modelNumber        String
+  description        String?            @db.Text
+  category           String?
+  subCategory        String?
+  sku                String?            @unique
 
   // Pricing
   warrantyPeriodMonths Int?
@@ -215,6 +216,11 @@ enum ProductStatus {
   ACTIVE
   INACTIVE
   DISCONTINUED
+}
+
+enum IdentificationType {
+  SERIAL // All products — serial number only
+  SERIAL_IMEI // SIM-enabled devices — serial + IMEI both
 }
 
 model GlobalConfig {
@@ -268,6 +274,7 @@ model Serial {
   id String @id @default(cuid())
 
   serialNumber    String    @unique
+  imei            String?   @unique
   batchId         String?
   manufactureDate DateTime?
   dispatchDate    DateTime?

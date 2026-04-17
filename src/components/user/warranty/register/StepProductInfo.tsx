@@ -13,10 +13,10 @@ import {
   Search,
   Loader2,
   Hash,
-  Layers,
   ChevronDown,
   Edit3,
 } from "lucide-react";
+import { useAdminProducts } from "@/hooks/admin/use-admin-products";
 
 // Integrated your custom selectors
 import BrandSelect from "@/components/common/Form/BrandSelect";
@@ -55,6 +55,29 @@ export default function StepProductInfo({
 }: any) {
   const [isCheckingSerial, setIsCheckingSerial] = useState(false);
   const [showOtherCategory, setShowOtherCategory] = useState(false);
+  const { products } = useAdminProducts();
+
+  const selectedProduct = products?.find(
+    (product: any) => product.id === data.productId,
+  );
+  const requiresImei = selectedProduct?.identificationType === "SERIAL_IMEI";
+
+  useEffect(() => {
+    if (selectedProduct) {
+      update({
+        modelNumber: selectedProduct.modelNumber || "",
+        productName: selectedProduct.name || "",
+        brand: selectedProduct.brand?.name || data.brand,
+        brandId: selectedProduct.brandId,
+      });
+    }
+  }, [selectedProduct?.id]);
+
+  useEffect(() => {
+    if (selectedProduct?.identificationType !== "SERIAL_IMEI" && data.imei) {
+      update({ imei: "" });
+    }
+  }, [selectedProduct?.identificationType]);
 
   // 🔥 Bridge LocationSelector state with the 'update' prop
   const locationValues = {
@@ -188,15 +211,25 @@ export default function StepProductInfo({
                 disabled={!data.brandId}
                 onChange={(val: string) => update({ productId: val })}
               />
+              {selectedProduct && (
+                <p className="text-[10px] font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300 opacity-80 mt-2">
+                  {selectedProduct.identificationType === "SERIAL_IMEI"
+                    ? "Requires serial + IMEI for registration."
+                    : "Requires serial only for registration."}
+                </p>
+              )}
             </div>
 
             <div className="space-y-1">
-              <label className={labelClasses}>IMEI / Model number</label>
+              <label className={labelClasses}>Model number</label>
               <input
-                value={data.imei}
-                onChange={(e) => update({ imei: e.target.value })}
-                placeholder="e.g. 354688110984156"
-                className={inputClasses}
+                value={data.modelNumber}
+                readOnly
+                placeholder="Select a product to auto-fill model number"
+                className={cn(
+                  inputClasses,
+                  "bg-slate-100 dark:bg-gray-900 cursor-not-allowed",
+                )}
               />
             </div>
 
@@ -324,15 +357,34 @@ export default function StepProductInfo({
             </div>
 
             {/* IMEI Field */}
-            <div className="space-y-2">
-              <label className={labelClasses}>IMEI (Optional)</label>
-              <input
-                value={data.imei}
-                onChange={(e) => update({ imei: e.target.value })}
-                placeholder="Enter IMEI if applicable..."
-                className={inputClasses}
-              />
-            </div>
+            {requiresImei ? (
+              <div className="space-y-2">
+                <label className={labelClasses}>IMEI *</label>
+                <input
+                  value={data.imei}
+                  onChange={(e) => update({ imei: e.target.value })}
+                  placeholder="Enter 15-digit IMEI..."
+                  className={inputClasses}
+                />
+                <p className={secondaryText}>
+                  This product requires both serial and IMEI for warranty
+                  registration.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <label className={labelClasses}>IMEI</label>
+                <input
+                  value={data.imei}
+                  onChange={(e) => update({ imei: e.target.value })}
+                  placeholder="Optional IMEI"
+                  className={inputClasses}
+                />
+                <p className={secondaryText}>
+                  IMEI is optional unless the selected product requires it.
+                </p>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -514,7 +566,8 @@ export default function StepProductInfo({
           onClick={onNext}
           disabled={
             (step === 1 && (!data.brandId || !data.productId)) ||
-            (step === 2 && !data.serialNumber) ||
+            (step === 2 &&
+              (!data.serialNumber || (requiresImei && !data.imei))) ||
             (step === 3 &&
               (!data.purchaseDate || !data.category || !data.country))
           }

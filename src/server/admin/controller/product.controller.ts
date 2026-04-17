@@ -67,6 +67,11 @@ export const ProductController = {
         variants: data.variants,
         serialRegex: data.serialRegex,
         termsUrl: data.termsUrl,
+        identificationType:
+          data.identificationType &&
+          data.identificationType.toUpperCase() === "SERIAL_IMEI"
+            ? "SERIAL_IMEI"
+            : "SERIAL",
         // Force status to UPPERCASE for Enum safety
         status: data.status ? data.status.toUpperCase() : "ACTIVE",
         isDeleted: false,
@@ -118,6 +123,9 @@ export const ProductController = {
         variants: data.variants,
         serialRegex: data.serialRegex,
         termsUrl: data.termsUrl,
+        identificationType: data.identificationType
+          ? data.identificationType.toUpperCase()
+          : undefined,
         // Ensure status matches Enum (ACTIVE, INACTIVE, DISCONTINUED)
         status: data.status ? data.status.toUpperCase() : undefined,
       },

@@ -29,6 +29,7 @@ export default function AddProductModal({
   const [currency, setCurrency] = useState("USD");
   const [category, setCategory] = useState("");
   const [warranty, setWarranty] = useState("1");
+  const [identificationType, setIdentificationType] = useState("SERIAL");
 
   // 🌍 Location Selector State
   const [locationValues, setLocationValues] = useState({
@@ -64,6 +65,7 @@ export default function AddProductModal({
 
     data.brandId = selectedBrandId;
     data.currency = currency;
+    data.identificationType = identificationType;
     data.status = "ACTIVE";
     // 🌍 Assign country from LocationSelector state
     data.manufactureCountry = locationValues.country;
@@ -136,6 +138,19 @@ export default function AddProductModal({
                 required
                 className={inputClasses}
               />
+            </div>
+
+            <div className="space-y-1">
+              <label className={labelClasses}>Identification type</label>
+              <select
+                name="identificationType"
+                value={identificationType}
+                onChange={(e) => setIdentificationType(e.target.value)}
+                className={cn(inputClasses, "appearance-none cursor-pointer")}
+              >
+                <option value="SERIAL">Serial number only</option>
+                <option value="SERIAL_IMEI">Serial + IMEI</option>
+              </select>
             </div>
 
             {/* Row 2 */}
