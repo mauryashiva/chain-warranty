@@ -21,6 +21,9 @@ export default function SerialTable({ serials, loading, onEdit }: any) {
                 Retailer
               </th>
               <th className="px-4 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-800 dark:text-slate-200">
+                IMEI
+              </th>
+              <th className="px-4 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-800 dark:text-slate-200">
                 Status
               </th>
               <th className="px-4 py-6 text-[10px] font-black uppercase tracking-[0.2em] text-slate-800 dark:text-slate-200 text-center">
@@ -34,7 +37,7 @@ export default function SerialTable({ serials, loading, onEdit }: any) {
           <tbody className="divide-y divide-slate-50 dark:divide-gray-900">
             {loading ? (
               <tr>
-                <td colSpan={7} className="py-24 text-center">
+                <td colSpan={8} className="py-24 text-center">
                   <Loader2
                     className="animate-spin mx-auto text-blue-600"
                     size={30}
@@ -45,7 +48,7 @@ export default function SerialTable({ serials, loading, onEdit }: any) {
             ) : serials.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="py-24 text-center text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]"
                 >
                   No serials found
@@ -85,6 +88,9 @@ export default function SerialTable({ serials, loading, onEdit }: any) {
                   </td>
                   <td className="px-4 py-7 text-[11px] font-bold text-slate-800 dark:text-slate-200 uppercase">
                     {serial.retailer?.name || "Warehouse"}
+                  </td>
+                  <td className="px-4 py-7 text-[11px] font-mono text-slate-600 dark:text-slate-400 uppercase">
+                    {serial.imei || "—"}
                   </td>
                   <td className="px-4 py-7">
                     <span
