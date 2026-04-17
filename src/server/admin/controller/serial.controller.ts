@@ -144,6 +144,23 @@ export const SerialController = {
           continue;
         }
 
+        // Validate against product's custom serial regex pattern
+        if (product.serialRegex) {
+          try {
+            const customRegex = new RegExp(product.serialRegex);
+            if (!customRegex.test(cleanSN)) {
+              results.failed++;
+              results.duplicates.push(cleanSN);
+              continue;
+            }
+          } catch (error) {
+            // If regex is invalid, skip this serial
+            results.failed++;
+            results.duplicates.push(cleanSN);
+            continue;
+          }
+        }
+
         if (product.identificationType === "SERIAL_IMEI" && !cleanImei) {
           results.failed++;
           results.duplicates.push(cleanSN);

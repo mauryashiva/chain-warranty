@@ -56,30 +56,86 @@ export default function BulkUploadSerialsModal({
 
   useClickOutside(modalRef, onClose);
 
-  // --- CSV Parser ---
+  // --- CSV Parser with Validation ---
   const parseCSV = (
     file: File,
   ): Promise<Array<{ serialNumber: string; imei?: string }>> => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       Papa.parse(file, {
         header: true,
         skipEmptyLines: true,
         complete: (results) => {
-          const serials = results.data
-            .map((row: any) => {
-              const serial = (
-                row.serial_number ||
-                row.serial ||
-                row.serialNumber
-              )?.trim();
-              const rawImei = row.imei || row.IMEI;
-              const imei = rawImei ? rawImei.toString().trim() : undefined;
-              if (!serial) return null;
-              return requiresImei
+          const serials: Array<{ serialNumber: string; imei?: string }> = [];
+          const errors: string[] = [];
+
+          results.data.forEach((row: any, index: number) => {
+            const serial = (
+              row.serial_number ||
+              row.serial ||
+              row.serialNumber
+            )?.trim();
+            const rawImei = row.imei || row.IMEI;
+            const imei = rawImei ? rawImei.toString().trim() : undefined;
+
+            if (!serial) {
+              errors.push(`Row ${index + 1}: Missing serial number`);
+              return;
+            }
+
+            // Validate serial format
+            const generalSerialRegex = /^[A-Za-z0-9-]+$/;
+            if (!generalSerialRegex.test(serial)) {
+              errors.push(`Row ${index + 1}: Invalid serial format: ${serial}`);
+              return;
+            }
+
+            // Validate against product's custom serial regex
+            if (selectedProductData?.serialRegex) {
+              try {
+                const customRegex = new RegExp(selectedProductData.serialRegex);
+                if (!customRegex.test(serial)) {
+                  errors.push(
+                    `Row ${index + 1}: Serial does not match product pattern (${selectedProductData.serialRegex}): ${serial}`,
+                  );
+                  return;
+                }
+              } catch (error) {
+                errors.push(`Row ${index + 1}: Invalid product regex pattern`);
+                return;
+              }
+            }
+
+            // Validate IMEI if required
+            if (requiresImei && !imei) {
+              errors.push(
+                `Row ${index + 1}: IMEI required for this product: ${serial}`,
+              );
+              return;
+            }
+
+            if (requiresImei && imei && !/^\d{15}$/.test(imei)) {
+              errors.push(
+                `Row ${index + 1}: Invalid IMEI format (must be 15 digits): ${imei}`,
+              );
+              return;
+            }
+
+            serials.push(
+              requiresImei
                 ? { serialNumber: serial, imei }
-                : { serialNumber: serial };
-            })
-            .filter(Boolean) as Array<{ serialNumber: string; imei?: string }>;
+                : { serialNumber: serial },
+            );
+          });
+
+          if (errors.length > 0) {
+            reject(
+              new Error(
+                `Validation errors:\n${errors.slice(0, 10).join("\n")}${errors.length > 10 ? "\n...and more" : ""}`,
+              ),
+            );
+            return;
+          }
+
           resolve(serials);
         },
       });
@@ -95,20 +151,110 @@ export default function BulkUploadSerialsModal({
       if (entryMode === "file" && file) {
         serialItems = await parseCSV(file);
       } else {
-        serialItems = manualSerials
+        // Parse and validate manual serials
+        const manualLines = manualSerials
           .split("\n")
           .map((line) => line.trim())
-          .filter((line) => line.length > 0)
-          .map((line) => {
+          .filter((line) => line.length > 0);
+
+        const errors: string[] = [];
+
+        serialItems = manualLines
+          .map((line, index) => {
             if (requiresImei) {
               const [serial, imei] = line
                 .split(/[|,]/)
                 .map((value) => value.trim());
-              return { serialNumber: serial, imei };
-            }
 
-            return { serialNumber: line };
-          });
+              if (!serial) {
+                errors.push(`Line ${index + 1}: Missing serial number`);
+                return null;
+              }
+
+              // Validate serial format
+              const generalSerialRegex = /^[A-Za-z0-9-]+$/;
+              if (!generalSerialRegex.test(serial)) {
+                errors.push(
+                  `Line ${index + 1}: Invalid serial format: ${serial}`,
+                );
+                return null;
+              }
+
+              // Validate against product's custom serial regex
+              if (selectedProductData?.serialRegex) {
+                try {
+                  const customRegex = new RegExp(
+                    selectedProductData.serialRegex,
+                  );
+                  if (!customRegex.test(serial)) {
+                    errors.push(
+                      `Line ${index + 1}: Serial does not match product pattern (${selectedProductData.serialRegex}): ${serial}`,
+                    );
+                    return null;
+                  }
+                } catch (error) {
+                  errors.push(
+                    `Line ${index + 1}: Invalid product regex pattern`,
+                  );
+                  return null;
+                }
+              }
+
+              if (!imei) {
+                errors.push(
+                  `Line ${index + 1}: IMEI required for this product: ${serial}`,
+                );
+                return null;
+              }
+
+              if (!/^\d{15}$/.test(imei)) {
+                errors.push(
+                  `Line ${index + 1}: Invalid IMEI format (must be 15 digits): ${imei}`,
+                );
+                return null;
+              }
+
+              return { serialNumber: serial, imei };
+            } else {
+              // Validate serial format
+              const generalSerialRegex = /^[A-Za-z0-9-]+$/;
+              if (!generalSerialRegex.test(line)) {
+                errors.push(
+                  `Line ${index + 1}: Invalid serial format: ${line}`,
+                );
+                return null;
+              }
+
+              // Validate against product's custom serial regex
+              if (selectedProductData?.serialRegex) {
+                try {
+                  const customRegex = new RegExp(
+                    selectedProductData.serialRegex,
+                  );
+                  if (!customRegex.test(line)) {
+                    errors.push(
+                      `Line ${index + 1}: Serial does not match product pattern (${selectedProductData.serialRegex}): ${line}`,
+                    );
+                    return null;
+                  }
+                } catch (error) {
+                  errors.push(
+                    `Line ${index + 1}: Invalid product regex pattern`,
+                  );
+                  return null;
+                }
+              }
+
+              return { serialNumber: line };
+            }
+          })
+          .filter(Boolean) as Array<{ serialNumber: string; imei?: string }>;
+
+        if (errors.length > 0) {
+          throw new Error(
+            `Validation errors:\n${errors.slice(0, 10).join("\n")}${errors.length > 10 ? "\n...and more" : ""}`,
+          );
+        }
       }
 
       if (serialItems.length === 0) {
@@ -223,6 +369,39 @@ export default function BulkUploadSerialsModal({
                 brandId={selectedBrand}
                 disabled={!selectedBrand}
               />
+              {selectedProductData && (
+                <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-800 rounded-xl">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Info size={14} className="text-blue-600" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-blue-600">
+                      Serial Format Requirements
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    {selectedProductData.serialRegex && (
+                      <p className="text-xs font-mono bg-white dark:bg-gray-800 px-2 py-1 rounded border text-blue-700 dark:text-blue-300">
+                        Pattern:{" "}
+                        <code className="font-bold">
+                          {selectedProductData.serialRegex}
+                        </code>
+                      </p>
+                    )}
+                    <p className="text-[10px] font-bold text-slate-600 dark:text-slate-400">
+                      {requiresImei
+                        ? "Requires: Serial + IMEI (15 digits)"
+                        : "Requires: Serial only"}
+                    </p>
+                    {selectedProductData.serialRegex && (
+                      <p className="text-[10px] font-bold text-slate-500 dark:text-slate-500">
+                        Example:{" "}
+                        {selectedProductData.serialRegex.includes("SO1")
+                          ? "SO1-1234567-A"
+                          : "Check pattern above"}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-1">
@@ -349,6 +528,18 @@ export default function BulkUploadSerialsModal({
                       <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">
                         Maximum file size: 10MB
                       </p>
+                      {selectedProductData && (
+                        <div className="mt-4 p-3 bg-slate-100 dark:bg-gray-800 rounded-lg">
+                          <p className="text-[10px] font-black text-slate-600 dark:text-slate-400 uppercase mb-2">
+                            CSV Format Required:
+                          </p>
+                          <code className="text-xs font-mono text-slate-700 dark:text-slate-300">
+                            {requiresImei
+                              ? "serial_number,imei\nSO1-1234567-A,123456789012345"
+                              : "serial_number\nSO1-1234567-A"}
+                          </code>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

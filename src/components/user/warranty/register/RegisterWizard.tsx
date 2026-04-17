@@ -33,6 +33,7 @@ export default function RegisterWizard() {
     // --- 02. Purchase Metadata ---
     purchaseDate: "",
     warrantyPeriod: "2 years",
+    expiryDate: "", // 🛠️ Added: Initialize expiryDate
     price: "",
     retailerId: "", // 🛠️ Updated: Match schema 'retailerId'
     invoiceNumber: "",
