@@ -1,42 +1,32 @@
-"use client";
+import React from "react";
+import TransferWizard from "@/components/user/warranty/transfer/TransferWizard";
+import { ArrowRightLeft } from "lucide-react";
 
-import TransferForm from "@/components/user/warranty/TransferForm";
-import { Repeat } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+export const metadata = {
+  title: "Transfer Warranty | Chain Warranty",
+  description: "Transfer the ownership of your warranty to someone else securely via blockchain.",
+};
 
 export default function TransferPage() {
-  const searchParams = useSearchParams();
-  const id = searchParams.get("id");
-  const tokenId = searchParams.get("tokenId");
-
   return (
-    <div className="max-w-3xl space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700 p-4 lg:p-8">
-      {/* Header */}
-      <div>
-        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2">
-          <Repeat size={20} strokeWidth={3} />
-          <span className="text-[10px] font-black uppercase tracking-[0.3em]">
-            Ownership Migration
-          </span>
+    <div className="p-6 md:p-10 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <header className="max-w-4xl mx-auto space-y-2">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl flex items-center justify-center shadow-inner">
+            <ArrowRightLeft size={20} strokeWidth={2.5} />
+          </div>
+          <h1 className="text-3xl font-black tracking-tight text-gray-900 dark:text-white">
+            Transfer Warranty
+          </h1>
         </div>
-        <h1 className="text-4xl font-black tracking-tighter text-slate-950 dark:text-white">
-          Transfer Ownership
-        </h1>
-        <p className="mt-3 text-base font-bold text-slate-500 dark:text-neutral-400 leading-relaxed">
-          Move your verified product warranty to a different blockchain wallet.
-          This process updates the smart contract and the central registry.
+        <p className="text-sm font-bold text-gray-500 dark:text-gray-400 max-w-2xl pl-13">
+          Securely transfer the ownership of your digital warranty asset to a new owner. This will record a new transaction on the blockchain, and the new owner will gain full access and rights to the warranty.
         </p>
-      </div>
+      </header>
 
-      {id ? (
-        <TransferForm warrantyId={id} tokenId={tokenId || "N/A"} />
-      ) : (
-        <div className="rounded-3xl border-2 border-dashed border-gray-200 p-12 text-center dark:border-neutral-800">
-          <p className="text-sm font-bold text-slate-400">
-            Please select a warranty from your list to initiate a transfer.
-          </p>
-        </div>
-      )}
+      <main className="max-w-4xl mx-auto">
+        <TransferWizard />
+      </main>
     </div>
   );
 }

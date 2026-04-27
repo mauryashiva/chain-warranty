@@ -1,59 +1,140 @@
 import { prisma } from "@/server/db/prisma";
 import { blockchainService } from "@/server/blockchain/mint.service";
-import { ownershipService } from "./ownership.service";
 import { walletService } from "./wallet.service";
-import { sendEvent } from "@/server/events/sse"; // ✅ ADD THIS
+import { sendEvent } from "@/server/events/sse";
 
 type TransferInput = {
   warrantyId: string;
   fromWallet: string;
   toWallet: string;
+  reason?: string;
+  salePrice?: number;
 };
 
 export const transferService = {
-  async transfer({ warrantyId, fromWallet, toWallet }: TransferInput) {
-    // 🔥 Step 1 — Find users
-    const fromUser = await walletService.findOrCreateUserByWallet(fromWallet);
-    const toUser = await walletService.findOrCreateUserByWallet(toWallet);
+  async executeTransfer(data: TransferInput) {
+    const { warrantyId, fromWallet, toWallet, reason, salePrice } = data;
 
-    // 🔥 Step 2 — Get warranty
+    // 1. Fetch Sender and Recipient Users
+    const sender = await walletService.findOrCreateUserByWallet(fromWallet);
+    const recipient = await walletService.findOrCreateUserByWallet(toWallet);
+
+    if (sender.id === recipient.id) {
+      throw new Error("Cannot transfer to the same wallet");
+    }
+
+    // 2. Fetch Warranty to get TokenId
     const warranty = await prisma.warranty.findUnique({
       where: { id: warrantyId },
+      include: {
+        ownerships: {
+          where: { isActive: true },
+        },
+      },
     });
 
     if (!warranty) {
-      throw new Error("Warranty not found");
+      throw new Error("WARRANTY_NOT_FOUND");
     }
 
-    // 🔥 Step 3 — Blockchain transfer
+    // 3. Blockchain Transfer
     const blockchain = await blockchainService.transferWarranty(
       fromWallet,
       toWallet,
-      warranty.tokenId,
+      warranty.tokenId
     );
 
-    // 🔥 Step 4 — Update DB ownership
-    await ownershipService.transferOwnership(
-      warrantyId,
-      fromUser.id,
-      toUser.id,
-      blockchain.txHash,
-    );
+    // 4. Atomic Database Transaction
+    const result = await prisma.$transaction(async (tx) => {
+      // Deactivate current ownership
+      await tx.warrantyOwnership.updateMany({
+        where: {
+          warrantyId: warranty.id,
+          userId: sender.id,
+          isActive: true,
+        },
+        data: {
+          isActive: false,
+          toWallet: toWallet,
+        },
+      });
 
-    // 🔥 Step 5 — SSE EVENT (FIXED ✅)
+      // Create new ownership
+      const newOwnership = await tx.warrantyOwnership.create({
+        data: {
+          warrantyId: warranty.id,
+          userId: recipient.id,
+          isActive: true,
+          fromWallet: fromWallet,
+          transferReason: reason || "TRANSFER",
+          salePrice: salePrice || null,
+        },
+      });
+
+      // Create transfer record
+      const transferRecord = await tx.transfer.create({
+        data: {
+          warrantyId: warranty.id,
+          fromUserId: sender.id,
+          toUserId: recipient.id,
+          txHash: blockchain.txHash,
+          status: "COMPLETED",
+          fromWallet: fromWallet,
+          toWallet: toWallet,
+          reason: reason || "TRANSFER",
+          salePrice: salePrice || null,
+          transferDate: new Date(),
+        },
+      });
+
+      // Log warranty event
+      await tx.warrantyEvent.create({
+        data: {
+          warrantyId: warranty.id,
+          type: "TRANSFERRED",
+          txHash: blockchain.txHash,
+          triggeredBy: sender.id,
+          metadata: {
+            fromWallet,
+            toWallet,
+            reason: reason || "TRANSFER",
+          },
+        },
+      });
+
+      // Update warranty core record
+      await tx.warranty.update({
+        where: { id: warranty.id },
+        data: {
+          ownerWallet: toWallet,
+          status: "TRANSFERRED",
+          ownerName: null, 
+          ownerEmail: null,
+          ownerPhone: null,
+        },
+      });
+
+      return {
+        transferId: transferRecord.id,
+        txHash: blockchain.txHash,
+        newOwnership,
+      };
+    });
+
+    // 5. Fire SSE Event
     sendEvent({
       type: "WARRANTY_TRANSFERRED",
       data: {
         warrantyId,
-        fromUserId: fromUser.id,
-        toUserId: toUser.id,
+        fromUserId: sender.id,
+        toUserId: recipient.id,
         txHash: blockchain.txHash,
       },
     });
 
     return {
       success: true,
-      txHash: blockchain.txHash,
+      data: result,
     };
   },
 };

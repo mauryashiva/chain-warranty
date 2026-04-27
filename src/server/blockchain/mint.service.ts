@@ -49,7 +49,7 @@ export const blockchainService = {
   ) {
     const contract = getContract();
 
-    const tx = await contract.transferWarranty(fromWallet, toWallet, tokenId);
+    const tx = await contract.transferFrom(fromWallet, toWallet, tokenId);
 
     const receipt = await tx.wait();
 
