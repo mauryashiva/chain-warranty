@@ -708,6 +708,9 @@ model Transfer {
   toWallet     String?
   reason       String? // SOLD, GIFT, INHERITED etc
   salePrice    Decimal?  @db.Decimal(10, 2)
+  currency     String?   @default("USD")
+  ownerName    String?
+  ownerEmail   String?
   transferDate DateTime?
 
   // ID verification

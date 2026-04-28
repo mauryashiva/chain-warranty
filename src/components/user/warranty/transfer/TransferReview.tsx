@@ -4,7 +4,7 @@ import React from "react";
 import { ArrowLeft, Send, ShieldAlert, Loader2 } from "lucide-react";
 
 export default function TransferReview({ hook }: { hook: any }) {
-  const { selectedWarranty, recipientWallet, reason, isTransferring, handlePrevStep, handleTransfer } = hook;
+  const { selectedWarranty, recipientWallet, reason, customReason, ownerName, ownerEmail, salePrice, currency, isTransferring, handlePrevStep, handleTransfer } = hook;
 
   return (
     <div className="animate-in fade-in slide-in-from-right-4 duration-500 flex flex-col h-full">
@@ -46,10 +46,30 @@ export default function TransferReview({ hook }: { hook: any }) {
               <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Recipient Wallet</span>
               <span className="text-[11px] font-mono font-black text-blue-600 dark:text-blue-400">{recipientWallet}</span>
             </div>
+            {ownerName && (
+              <div className="flex justify-between items-center py-2">
+                <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">New Owner Name</span>
+                <span className="text-[12px] font-black text-gray-900 dark:text-white">{ownerName}</span>
+              </div>
+            )}
+            {ownerEmail && (
+              <div className="flex justify-between items-center py-2">
+                <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">New Owner Email</span>
+                <span className="text-[12px] font-black text-gray-900 dark:text-white">{ownerEmail}</span>
+              </div>
+            )}
             {reason && (
               <div className="flex justify-between items-center py-2">
                 <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Reason</span>
-                <span className="text-[12px] font-black text-gray-900 dark:text-white">{reason}</span>
+                <span className="text-[12px] font-black text-gray-900 dark:text-white">
+                  {reason === "OTHER" ? (customReason || "Other") : reason}
+                </span>
+              </div>
+            )}
+            {salePrice && (
+              <div className="flex justify-between items-center py-2">
+                <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Sale Price</span>
+                <span className="text-[12px] font-black text-gray-900 dark:text-white">{salePrice} {currency}</span>
               </div>
             )}
           </div>

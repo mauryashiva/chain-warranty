@@ -13,7 +13,12 @@ export function useTransferWarranty() {
   const [step, setStep] = useState<number>(1);
   const [selectedWarranty, setSelectedWarranty] = useState<any | null>(null);
   const [recipientWallet, setRecipientWallet] = useState<string>("");
-  const [reason, setReason] = useState<string>("");
+  const [reason, setReason] = useState<string>("SOLD");
+  const [customReason, setCustomReason] = useState<string>("");
+  const [ownerName, setOwnerName] = useState<string>("");
+  const [ownerEmail, setOwnerEmail] = useState<string>("");
+  const [salePrice, setSalePrice] = useState<string>("");
+  const [currency, setCurrency] = useState<string>("USD");
 
   const handleNextStep = () => {
     if (step === 1 && !selectedWarranty) {
@@ -41,7 +46,12 @@ export function useTransferWarranty() {
     setStep(1);
     setSelectedWarranty(null);
     setRecipientWallet("");
-    setReason("");
+    setReason("SOLD");
+    setCustomReason("");
+    setOwnerName("");
+    setOwnerEmail("");
+    setSalePrice("");
+    setCurrency("USD");
   };
 
   const transfer = async () => {
@@ -62,7 +72,11 @@ export function useTransferWarranty() {
         warrantyId: selectedWarranty.id,
         fromWallet: currentOwner,
         toWallet: recipientWallet,
-        reason: reason || "Transfer",
+        reason: reason === "OTHER" ? customReason || "Other" : reason || "Transfer",
+        ownerName,
+        ownerEmail,
+        salePrice,
+        currency,
       } as any);
 
       if (data) {
@@ -93,6 +107,16 @@ export function useTransferWarranty() {
     setRecipientWallet,
     reason,
     setReason,
+    customReason,
+    setCustomReason,
+    ownerName,
+    setOwnerName,
+    ownerEmail,
+    setOwnerEmail,
+    salePrice,
+    setSalePrice,
+    currency,
+    setCurrency,
     handleNextStep,
     handlePrevStep,
     resetState
