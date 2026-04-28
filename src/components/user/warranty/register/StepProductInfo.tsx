@@ -1,50 +1,12 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { cn } from "@/lib/utils";
-import {
-  Calendar,
-  DollarSign,
-  ArrowRight,
-  Package,
-  ShoppingCart,
-  CheckCircle2,
-  CalendarCheck,
-  Search,
-  Loader2,
-  Hash,
-  ChevronDown,
-  Edit3,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useAdminProducts } from "@/hooks/admin/use-admin-products";
 
-// Integrated your custom selectors
-import BrandSelect from "@/components/common/Form/BrandSelect";
-import ProductSelect from "@/components/common/Form/ProductSelect";
-// 🌍 Composable Location Selector
-import LocationRoot, {
-  CountryField,
-} from "@/components/common/Form/LocationSelector";
-
-const CONDITIONS = ["New", "Open box", "Refurbished", "Pre-owned"];
-const CATEGORIES = [
-  "Headphones / Audio",
-  "Smartphone",
-  "Laptop / Computer",
-  "Smart TV",
-  "Camera",
-  "Tablet",
-  "Wearable",
-  "Other electronics",
-];
-const PERIODS = [
-  "1 year",
-  "2 years",
-  "3 years",
-  "5 years",
-  "Lifetime",
-  "Other",
-];
+import ProductBasicDetails from "./ProductBasicDetails";
+import ProductValidation from "./ProductValidation";
+import PurchaseDetails from "./PurchaseDetails";
 
 export default function StepProductInfo({
   data,
@@ -54,7 +16,6 @@ export default function StepProductInfo({
   step = 1,
 }: any) {
   const [isCheckingSerial, setIsCheckingSerial] = useState(false);
-  const [showOtherCategory, setShowOtherCategory] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { products } = useAdminProducts();
 
@@ -171,15 +132,6 @@ export default function StepProductInfo({
     }
   }, [selectedProduct?.id]);
 
-  // 🔥 Bridge LocationSelector state with the 'update' prop
-  const locationValues = {
-    country: data.country || "",
-  };
-
-  const handleLocationChange = (field: string, value: string) => {
-    update({ [field]: value });
-  };
-
   // 🔥 LOGIC: Auto-Calculate Expiry Date
   useEffect(() => {
     if (data.purchaseDate && data.warrantyPeriod) {
@@ -248,453 +200,45 @@ export default function StepProductInfo({
 
       {/* SECTION 1: BASIC PRODUCT DETAILS - Step 1 */}
       {step === 1 && (
-        <section className="p-8 rounded-3xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm transition-all">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="p-2 rounded-lg bg-blue-600/10 text-blue-600">
-              <Package size={16} strokeWidth={3} />
-            </div>
-            <h3 className="text-xs font-black uppercase tracking-[0.25em] text-blue-600 whitespace-nowrap">
-              01. Basic Product Details
-            </h3>
-            <div className="h-px w-full bg-linear-to-r from-blue-100 to-transparent dark:from-gray-700" />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-1 md:col-span-2">
-              <label className={labelClasses}>Serial number *</label>
-              <div className="relative">
-                <input
-                  value={data.serialNumber}
-                  onChange={(e) => handleSerialChange(e.target.value)}
-                  placeholder="Enter Serial to auto-fetch details..."
-                  className={cn(
-                    inputClasses,
-                    "pr-12 border-blue-100 dark:border-blue-900/30",
-                  )}
-                />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                  {isCheckingSerial ? (
-                    <Loader2 className="animate-spin text-blue-600" size={18} />
-                  ) : data.productId ? (
-                    <CheckCircle2 className="text-emerald-500" size={18} />
-                  ) : (
-                    <Search className="text-gray-300" size={18} />
-                  )}
-                </div>
-              </div>
-              <p className={secondaryText}>
-                Primary identifier for on-chain registry
-              </p>
-            </div>
-
-            <div className="space-y-1">
-              <label className={labelClasses}>Select Brand *</label>
-              <BrandSelect
-                value={data.brandId}
-                onChange={(val: string) =>
-                  updateWithValidation({ brandId: val })
-                }
-              />
-              {errors.brandId && (
-                <p className="text-xs font-semibold text-red-500 mt-1 ml-1">
-                  ❌ {errors.brandId}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label className={labelClasses}>Product / Model *</label>
-              <ProductSelect
-                value={data.productId}
-                brandId={data.brandId}
-                disabled={!data.brandId}
-                onChange={(val: string) =>
-                  updateWithValidation({ productId: val })
-                }
-              />
-              {errors.productId && (
-                <p className="text-xs font-semibold text-red-500 mt-1 ml-1">
-                  ❌ {errors.productId}
-                </p>
-              )}
-              {selectedProduct && (
-                <p className="text-[10px] font-bold uppercase tracking-tight text-slate-700 dark:text-slate-300 opacity-80 mt-2">
-                  {selectedProduct.identificationType === "SERIAL_IMEI"
-                    ? "✓ Requires serial + IMEI for registration."
-                    : "✓ Requires serial only for registration."}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label className={labelClasses}>Model number</label>
-              <input
-                value={data.modelNumber}
-                readOnly
-                placeholder="Select a product to auto-fill model number"
-                className={cn(
-                  inputClasses,
-                  "bg-slate-100 dark:bg-gray-900 cursor-not-allowed",
-                )}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className={labelClasses}>Color / Variant</label>
-              <input
-                value={data.color}
-                onChange={(e) => update({ color: e.target.value })}
-                placeholder="e.g. Midnight Black"
-                className={inputClasses}
-              />
-            </div>
-
-            {/* 🔥 DROPDOWN CATEGORY SECTION */}
-            <div className="space-y-1 md:col-span-1">
-              <label className={labelClasses}>Product Category *</label>
-              <div className="relative">
-                <select
-                  value={
-                    CATEGORIES.includes(data.category)
-                      ? data.category
-                      : data.category
-                        ? "Other electronics"
-                        : ""
-                  }
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === "Other electronics") {
-                      setShowOtherCategory(true);
-                      updateWithValidation({ category: "" }); // Reset to allow typing
-                    } else {
-                      setShowOtherCategory(false);
-                      updateWithValidation({ category: val });
-                    }
-                  }}
-                  className={cn(
-                    inputClasses,
-                    "appearance-none cursor-pointer pr-10",
-                    errors.category
-                      ? "border-red-500 focus:border-red-500 focus:ring-red-600/5"
-                      : "",
-                  )}
-                >
-                  <option value="" disabled>
-                    Select a category
-                  </option>
-                  {CATEGORIES.map((cat) => (
-                    <option key={cat} value={cat}>
-                      {cat}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  size={16}
-                />
-              </div>
-              {errors.category && (
-                <p className="text-xs font-semibold text-red-500 mt-1 ml-1">
-                  ❌ {errors.category}
-                </p>
-              )}
-            </div>
-
-            {/* 🔥 "OTHER" INPUT FIELD (Conditional) */}
-            {(showOtherCategory ||
-              (data.category && !CATEGORIES.includes(data.category))) && (
-              <div className="space-y-1 md:col-span-1 animate-in slide-in-from-left-2 duration-300">
-                <label className={labelClasses}>Specify Category *</label>
-                <div className="relative">
-                  <Edit3
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-blue-500"
-                    size={16}
-                  />
-                  <input
-                    autoFocus
-                    value={data.category}
-                    onChange={(e) => update({ category: e.target.value })}
-                    placeholder="Type category name..."
-                    className={cn(
-                      inputClasses,
-                      "pl-12 border-blue-200 dark:border-blue-900/50",
-                    )}
-                  />
-                </div>
-              </div>
-            )}
-          </div>
-        </section>
+        <ProductBasicDetails
+          data={data}
+          update={update}
+          updateWithValidation={updateWithValidation}
+          errors={errors}
+          isCheckingSerial={isCheckingSerial}
+          handleSerialChange={handleSerialChange}
+          selectedProduct={selectedProduct}
+          inputClasses={inputClasses}
+          labelClasses={labelClasses}
+          secondaryText={secondaryText}
+        />
       )}
 
       {/* SECTION 2: SERIAL VALIDATION - Step 2 */}
       {step === 2 && (
-        <section className="p-8 rounded-3xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm transition-all">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="p-3 rounded-2xl bg-blue-100 dark:bg-blue-900/20">
-              <Hash size={24} className="text-blue-600" />
-            </div>
-            <div>
-              <h3 className="text-lg font-black text-gray-900 dark:text-white">
-                Serial Number Validation
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Enter your product's serial number for verification
-              </p>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <label className={labelClasses}>Serial Number *</label>
-              <div className="relative">
-                <Hash
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={16}
-                />
-                <input
-                  value={data.serialNumber}
-                  onChange={(e) => handleSerialChange(e.target.value)}
-                  placeholder="Enter serial number..."
-                  className={cn(
-                    inputClasses,
-                    "pl-12",
-                    errors.serialNumber
-                      ? "border-red-500 focus:border-red-500 focus:ring-red-600/5"
-                      : "",
-                  )}
-                />
-                {isCheckingSerial && (
-                  <Loader2
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-500 animate-spin"
-                    size={16}
-                  />
-                )}
-              </div>
-              {errors.serialNumber && (
-                <p className="text-xs font-semibold text-red-500 ml-1">
-                  ❌ {errors.serialNumber}
-                </p>
-              )}
-              <p className={secondaryText}>
-                Usually found on the product packaging or device
-              </p>
-            </div>
-
-            {/* IMEI Field - Always shown but validation changes based on product */}
-            <div className="space-y-2">
-              <label
-                className={cn(labelClasses, requiresImei ? "text-red-600" : "")}
-              >
-                {requiresImei ? "IMEI * (Required)" : "IMEI (Optional)"}
-              </label>
-              <input
-                value={data.imei || ""}
-                onChange={(e) => updateWithValidation({ imei: e.target.value })}
-                placeholder={
-                  requiresImei ? "Enter 15-digit IMEI..." : "Optional IMEI"
-                }
-                className={cn(
-                  inputClasses,
-                  errors.imei
-                    ? "border-red-500 focus:border-red-500 focus:ring-red-600/5"
-                    : "",
-                )}
-              />
-              {errors.imei && (
-                <p className="text-xs font-semibold text-red-500 ml-1">
-                  ❌ {errors.imei}
-                </p>
-              )}
-              <p className={secondaryText}>
-                {requiresImei
-                  ? "This product requires both serial and IMEI for warranty registration."
-                  : "IMEI is optional unless the selected product requires it."}
-              </p>
-            </div>
-          </div>
-        </section>
+        <ProductValidation
+          data={data}
+          updateWithValidation={updateWithValidation}
+          errors={errors}
+          isCheckingSerial={isCheckingSerial}
+          handleSerialChange={handleSerialChange}
+          requiresImei={requiresImei}
+          inputClasses={inputClasses}
+          labelClasses={labelClasses}
+          secondaryText={secondaryText}
+        />
       )}
 
-      {/* SECTION 2: PURCHASE DETAILS - Step 3 */}
+      {/* SECTION 3: PURCHASE DETAILS - Step 3 */}
       {step === 3 && (
-        <section className="p-8 rounded-3xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm">
-          <div className="flex items-center gap-4 mb-8">
-            <div className="p-2 rounded-lg bg-blue-600/10 text-blue-600">
-              <ShoppingCart size={16} strokeWidth={3} />
-            </div>
-            <h3 className="text-xs font-black uppercase tracking-[0.25em] text-blue-600 whitespace-nowrap">
-              02. Purchase Details
-            </h3>
-            <div className="h-px w-full bg-linear-to-r from-blue-100 to-transparent dark:from-gray-700" />
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="space-y-1">
-              <label className={labelClasses}>Purchase date *</label>
-              <div className="relative">
-                <input
-                  type="date"
-                  value={data.purchaseDate}
-                  onChange={(e) =>
-                    updateWithValidation({ purchaseDate: e.target.value })
-                  }
-                  className={cn(
-                    inputClasses,
-                    "pr-12",
-                    errors.purchaseDate
-                      ? "border-red-500 focus:border-red-500 focus:ring-red-600/5"
-                      : "",
-                  )}
-                />
-                <Calendar
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={18}
-                />
-              </div>
-              {errors.purchaseDate && (
-                <p className="text-xs font-semibold text-red-500 mt-1 ml-1">
-                  ❌ {errors.purchaseDate}
-                </p>
-              )}
-            </div>
-
-            <div className="space-y-1">
-              <label className={labelClasses}>Warranty period</label>
-              <div className="relative">
-                <select
-                  value={data.warrantyPeriod}
-                  onChange={(e) => update({ warrantyPeriod: e.target.value })}
-                  className={cn(
-                    inputClasses,
-                    "appearance-none cursor-pointer pr-10",
-                  )}
-                >
-                  {PERIODS.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  size={16}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className={labelClasses}>Expiry (Calculated)</label>
-              <div className="relative">
-                <input
-                  readOnly
-                  value={data.expiryDate || "Calculating..."}
-                  className={cn(
-                    inputClasses,
-                    "pr-12 bg-gray-50/50 dark:bg-gray-800/50 cursor-not-allowed opacity-80",
-                  )}
-                />
-                <CalendarCheck
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-blue-500 opacity-60"
-                  size={18}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className={labelClasses}>Price (USD)</label>
-              <div className="relative">
-                <input
-                  type="number"
-                  step="0.01"
-                  value={data.price}
-                  onChange={(e) => update({ price: e.target.value })}
-                  placeholder="0.00"
-                  className={cn(inputClasses, "pl-12")}
-                />
-                <DollarSign
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={18}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <label className={labelClasses}>Retailer</label>
-              <input
-                value={data.retailer}
-                onChange={(e) => update({ retailer: e.target.value })}
-                placeholder="e.g. Amazon"
-                className={inputClasses}
-              />
-            </div>
-
-            <div className="space-y-1">
-              <label className={labelClasses}>Invoice Number</label>
-              <div className="relative">
-                <input
-                  value={data.invoiceNumber}
-                  onChange={(e) => update({ invoiceNumber: e.target.value })}
-                  placeholder="INV-2024-001"
-                  className={cn(inputClasses, "pl-12")}
-                />
-                <Hash
-                  className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-                  size={16}
-                />
-              </div>
-            </div>
-
-            <LocationRoot
-              values={locationValues}
-              onChange={(field: string, value: string) => {
-                handleLocationChange(field, value);
-                updateWithValidation({ [field]: value });
-              }}
-            >
-              <div className="space-y-1 lg:col-span-1">
-                <CountryField label="Country *" />
-                {errors.country && (
-                  <p className="text-xs font-semibold text-red-500 mt-1 ml-1">
-                    ❌ {errors.country}
-                  </p>
-                )}
-              </div>
-            </LocationRoot>
-          </div>
-        </section>
-      )}
-
-      {/* SECTION 3: CONDITION - Step 3 */}
-      {step === 3 && (
-        <section className="space-y-5 p-8 rounded-3xl bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-          <label className={labelClasses}>
-            Product condition at registration
-          </label>
-          <div className="flex flex-wrap gap-3">
-            {CONDITIONS.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => update({ condition: c })}
-                className={cn(
-                  "group relative px-8 py-4 rounded-2xl text-[13px] font-black tracking-tight transition-all border active:scale-95 flex items-center gap-3 overflow-hidden",
-                  data.condition === c
-                    ? "bg-gray-900 text-white border-gray-900 shadow-xl dark:bg-blue-600 dark:border-blue-600"
-                    : "bg-white border-gray-200 text-gray-600 hover:border-blue-400 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-400",
-                )}
-              >
-                {data.condition === c && (
-                  <CheckCircle2
-                    size={16}
-                    className="text-blue-400 dark:text-white animate-in zoom-in-50"
-                  />
-                )}
-                {c}
-              </button>
-            ))}
-          </div>
-        </section>
+        <PurchaseDetails
+          data={data}
+          update={update}
+          updateWithValidation={updateWithValidation}
+          errors={errors}
+          inputClasses={inputClasses}
+          labelClasses={labelClasses}
+        />
       )}
 
       {/* FOOTER */}
