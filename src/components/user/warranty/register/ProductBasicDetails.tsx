@@ -154,10 +154,12 @@ export default function ProductBasicDetails({
               className={cn(
                 inputClasses,
                 "appearance-none cursor-pointer pr-10",
+                !!selectedProduct ? "bg-slate-100 dark:bg-gray-900 cursor-not-allowed opacity-80" : "",
                 errors.category
                   ? "border-red-500 focus:border-red-500 focus:ring-red-600/5"
                   : "",
               )}
+              disabled={!!selectedProduct}
             >
               <option value="" disabled>
                 Select a category

@@ -26,7 +26,7 @@ export default function AddProductModal({
 
   // States for interactive fields
   const [selectedBrandId, setSelectedBrandId] = useState("");
-  const [currency, setCurrency] = useState("USD");
+  const [currency] = useState("USD");
   const [category, setCategory] = useState("");
   const [warranty, setWarranty] = useState("1");
   const [identificationType, setIdentificationType] = useState("SERIAL");
@@ -217,14 +217,9 @@ export default function AddProductModal({
             <div className="space-y-1">
               <label className={labelClasses}>Base Price *</label>
               <div className="relative flex items-center">
-                <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="absolute left-3 bg-transparent text-[10px] font-black text-slate-500 outline-none appearance-none z-10"
-                >
-                  <option value="USD">USD</option>
-                  <option value="INR">INR</option>
-                </select>
+                <div className="absolute left-3 bg-transparent text-[10px] font-black text-slate-500 z-10 flex items-center h-full">
+                  USD
+                </div>
                 <input
                   name="priceMin"
                   type="number"
@@ -238,14 +233,9 @@ export default function AddProductModal({
             <div className="space-y-1">
               <label className={labelClasses}>Max Price Range</label>
               <div className="relative flex items-center">
-                <select
-                  value={currency}
-                  onChange={(e) => setCurrency(e.target.value)}
-                  className="absolute left-3 bg-transparent text-[10px] font-black text-slate-500 outline-none appearance-none z-10"
-                >
-                  <option value="USD">USD</option>
-                  <option value="INR">INR</option>
-                </select>
+                <div className="absolute left-3 bg-transparent text-[10px] font-black text-slate-500 z-10 flex items-center h-full">
+                  USD
+                </div>
                 <input
                   name="priceMax"
                   type="number"

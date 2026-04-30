@@ -32,7 +32,6 @@ export default function StepProductInfo({
         if (value.trim().length < 3)
           return "Serial number must be at least 3 characters";
 
-        // If product is selected, validate against product's serial regex pattern
         if (selectedProduct && selectedProduct.serialRegex) {
           try {
             const regex = new RegExp(selectedProduct.serialRegex);
@@ -40,10 +39,7 @@ export default function StepProductInfo({
               return `Serial does not match product pattern: ${selectedProduct.serialRegex}`;
             }
           } catch (err) {
-            console.error(
-              "Invalid regex pattern:",
-              selectedProduct.serialRegex,
-            );
+            console.error("Invalid regex pattern:", selectedProduct.serialRegex);
           }
         }
         return "";
@@ -71,19 +67,23 @@ export default function StepProductInfo({
       case "country":
         if (!value) return "Country is required";
         return "";
+      case "price":
+        if (!value || parseFloat(value) <= 0) return "Valid price is required";
+        return "";
+      case "currency":
+        if (!value) return "Currency is required";
+        return "";
       default:
         return "";
     }
   };
 
-  // Check if current step is valid (without setting errors)
+  // Check if current step is valid
   const isStepValid = (): boolean => {
     if (step === 1) {
       return !!(data.brandId && data.productId && data.category);
     } else if (step === 2) {
       if (!data.serialNumber?.trim()) return false;
-
-      // Check serial regex if product is selected
       if (selectedProduct && selectedProduct.serialRegex) {
         try {
           const regex = new RegExp(selectedProduct.serialRegex);
@@ -92,20 +92,23 @@ export default function StepProductInfo({
           return false;
         }
       }
-
       if (requiresImei && !data.imei?.trim()) return false;
       if (data.imei && !/^\d{15}$/.test(data.imei.trim())) return false;
       return true;
     } else if (step === 3) {
-      return !!(data.purchaseDate && data.category && data.country);
+      return !!(
+        data.purchaseDate && 
+        data.category && 
+        data.country && 
+        data.price && 
+        data.currency
+      );
     }
     return false;
   };
 
-  // Update field with validation
   const updateWithValidation = (updates: any) => {
     const newErrors = { ...errors };
-
     Object.entries(updates).forEach(([key, value]) => {
       const error = validateField(key, value);
       if (error) {
@@ -114,7 +117,6 @@ export default function StepProductInfo({
         delete newErrors[key];
       }
     });
-
     setErrors(newErrors);
     update(updates);
   };
@@ -126,13 +128,13 @@ export default function StepProductInfo({
         productName: selectedProduct.name || "",
         brand: selectedProduct.brand?.name || data.brand,
         brandId: selectedProduct.brandId,
+        category: selectedProduct.category || data.category,
+        warrantyPeriod: selectedProduct.warrantyPeriod || data.warrantyPeriod,
       });
-      // Clear IMEI error when product changes
       setErrors((prev) => ({ ...prev, imei: "" }));
     }
   }, [selectedProduct?.id]);
 
-  // 🔥 LOGIC: Auto-Calculate Expiry Date
   useEffect(() => {
     if (data.purchaseDate && data.warrantyPeriod) {
       const purchase = new Date(data.purchaseDate);
@@ -148,16 +150,13 @@ export default function StepProductInfo({
     }
   }, [data.purchaseDate, data.warrantyPeriod]);
 
-  // 🔥 LOGIC: Auto-Fetch Product by Serial
   const handleSerialChange = async (serial: string) => {
     updateWithValidation({ serialNumber: serial });
-
     if (serial.length >= 6) {
       setIsCheckingSerial(true);
       try {
         const res = await fetch(`/api/user/verify?serial=${serial}`);
         const result = await res.json();
-
         if (result.success && result.data) {
           update({
             brandId: result.data.brandId,
@@ -183,7 +182,6 @@ export default function StepProductInfo({
 
   return (
     <div className="max-w-4xl mx-auto space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Step Title */}
       <div className="text-center">
         <h2 className="text-2xl font-black text-gray-900 dark:text-white">
           {step === 1 && "Select Your Product"}
@@ -191,14 +189,12 @@ export default function StepProductInfo({
           {step === 3 && "Purchase Information"}
         </h2>
         <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
-          {step === 1 &&
-            "Choose the brand and product for your warranty registration"}
+          {step === 1 && "Choose the brand and product for your warranty registration"}
           {step === 2 && "Enter and validate your product's serial number"}
           {step === 3 && "Provide purchase details and pricing information"}
         </p>
       </div>
 
-      {/* SECTION 1: BASIC PRODUCT DETAILS - Step 1 */}
       {step === 1 && (
         <ProductBasicDetails
           data={data}
@@ -214,7 +210,6 @@ export default function StepProductInfo({
         />
       )}
 
-      {/* SECTION 2: SERIAL VALIDATION - Step 2 */}
       {step === 2 && (
         <ProductValidation
           data={data}
@@ -229,7 +224,6 @@ export default function StepProductInfo({
         />
       )}
 
-      {/* SECTION 3: PURCHASE DETAILS - Step 3 */}
       {step === 3 && (
         <PurchaseDetails
           data={data}
@@ -241,9 +235,7 @@ export default function StepProductInfo({
         />
       )}
 
-      {/* FOOTER */}
       <div className="flex flex-col items-center justify-between gap-4 pt-4">
-        {/* Error Summary - Only show if there are actual errors AND form is not valid */}
         {!isStepValid() &&
           Object.keys(errors).length > 0 &&
           Object.values(errors).some((e) => e) && (
@@ -255,10 +247,7 @@ export default function StepProductInfo({
                 {Object.entries(errors)
                   .filter(([_, error]) => error && error.trim() !== "")
                   .map(([field, error]) => (
-                    <li
-                      key={field}
-                      className="text-xs text-red-600 dark:text-red-400"
-                    >
+                    <li key={field} className="text-xs text-red-600 dark:text-red-400">
                       • {error}
                     </li>
                   ))}
@@ -272,38 +261,27 @@ export default function StepProductInfo({
               onClick={onBack}
               className="group flex items-center gap-3 px-6 py-3 rounded-xl text-xs font-black text-gray-500 hover:text-gray-900 dark:hover:text-white transition-all active:scale-95"
             >
-              <ArrowRight
-                size={16}
-                className="rotate-180 group-hover:-translate-x-1 transition-transform"
-              />
+              <ArrowRight size={16} className="rotate-180 group-hover:-translate-x-1 transition-transform" />
               BACK
             </button>
           )}
 
           <button
             onClick={() => {
-              // Validate all required fields before proceeding
               const stepErrors: Record<string, string> = {};
-
               if (step === 1) {
                 if (!data.brandId) stepErrors.brandId = "Please select a brand";
-                if (!data.productId)
-                  stepErrors.productId = "Please select a product";
-                if (!data.category)
-                  stepErrors.category = "Product category is required";
+                if (!data.productId) stepErrors.productId = "Please select a product";
+                if (!data.category) stepErrors.category = "Product category is required";
               } else if (step === 2) {
-                if (!data.serialNumber?.trim())
-                  stepErrors.serialNumber = "Serial number is required";
-                if (requiresImei && !data.imei?.trim())
-                  stepErrors.imei = "IMEI is required for this product";
-                if (data.imei && !/^\d{15}$/.test(data.imei.trim()))
-                  stepErrors.imei = "IMEI must be exactly 15 digits";
+                if (!data.serialNumber?.trim()) stepErrors.serialNumber = "Serial number is required";
+                if (requiresImei && !data.imei?.trim()) stepErrors.imei = "IMEI is required";
+                if (data.imei && !/^\d{15}$/.test(data.imei.trim())) stepErrors.imei = "IMEI must be 15 digits";
               } else if (step === 3) {
-                if (!data.purchaseDate)
-                  stepErrors.purchaseDate = "Purchase date is required";
-                if (!data.category)
-                  stepErrors.category = "Product category is required";
+                if (!data.purchaseDate) stepErrors.purchaseDate = "Purchase date is required";
                 if (!data.country) stepErrors.country = "Country is required";
+                if (!data.price) stepErrors.price = "Price is required";
+                if (!data.currency) stepErrors.currency = "Currency is required";
               }
 
               if (Object.keys(stepErrors).length > 0) {
@@ -317,10 +295,7 @@ export default function StepProductInfo({
             className="group flex items-center gap-4 bg-blue-600 text-white px-10 py-5 rounded-xl font-black text-xs hover:bg-blue-700 transition-all shadow-2xl shadow-blue-600/30 active:scale-[0.98] disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed ml-auto"
           >
             {step === 3 ? "CONTINUE TO UPLOAD" : "NEXT"}
-            <ArrowRight
-              size={18}
-              className="group-hover:translate-x-1 transition-transform"
-            />
+            <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
           </button>
         </div>
       </div>

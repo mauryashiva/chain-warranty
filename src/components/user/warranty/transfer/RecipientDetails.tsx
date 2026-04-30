@@ -1,10 +1,32 @@
 "use client";
 
-import React from "react";
-import { ArrowLeft, ArrowRight, Wallet, Info, ChevronDown } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { ArrowLeft, ArrowRight, Wallet, ChevronDown, Search } from "lucide-react";
 import { CURRENCIES } from "@/components/common/currencies";
+import { cn } from "@/lib/utils";
 
 export default function RecipientDetails({ hook }: { hook: any }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const filteredCurrencies = CURRENCIES.filter(
+    (c) =>
+      c.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      c.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   return (
     <div className="animate-in fade-in slide-in-from-right-4 duration-500 flex flex-col h-full">
       <div className="mb-6 space-y-2">
@@ -36,6 +58,7 @@ export default function RecipientDetails({ hook }: { hook: any }) {
             </div>
           </div>
         )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest flex items-center gap-2">
@@ -93,51 +116,92 @@ export default function RecipientDetails({ hook }: { hook: any }) {
               </select>
               <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={16} />
             </div>
-            {hook.reason === "OTHER" && (
-              <input
-                type="text"
-                value={hook.customReason}
-                onChange={(e) => hook.setCustomReason(e.target.value)}
-                placeholder="Please specify reason"
-                className="w-full mt-2 px-4 py-3 rounded-2xl border border-gray-200 bg-white text-[13px] font-bold outline-none transition duration-200 focus:border-blue-600 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100 animate-in fade-in slide-in-from-top-2"
-              />
-            )}
           </div>
 
+          {/* 🔍 CURRENCY FIELD WITH FIXES */}
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest flex justify-between items-end">
+            <label className="text-[10px] font-black uppercase text-gray-600 dark:text-gray-400 tracking-widest">
               Sale price (optional)
             </label>
-            <div className="relative flex">
-              <div className="relative w-32 border-r border-gray-200 dark:border-gray-700 z-10">
-                <select
-                  value={hook.currency}
-                  onChange={(e) => hook.setCurrency(e.target.value)}
-                  className="w-full h-full px-3 py-3 rounded-l-2xl border border-gray-200 border-r-0 bg-gray-50 text-[13px] font-bold outline-none transition duration-200 focus:border-blue-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 appearance-none pr-8 truncate"
+            <div className="relative flex w-full h-[46px]">
+              <div className="relative w-[110px] shrink-0 z-20 h-full" ref={dropdownRef}>
+                {/* Main Trigger Box */}
+                <div 
+                  onClick={() => setIsOpen(!isOpen)}
+                  className={cn(
+                    "flex items-center justify-between h-full px-4 rounded-l-2xl border border-r-0 transition-all cursor-pointer",
+                    "border-gray-200 bg-white dark:bg-gray-900 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800",
+                    isOpen && "border-blue-600 ring-1 ring-blue-600/20"
+                  )}
                 >
-                  <option value="USD">USD ($)</option>
-                  <option value="INR">INR (₹)</option>
-                  {CURRENCIES.map(c => (
-                    c.code !== "USD" && c.code !== "INR" && (
-                      <option key={c.code} value={c.code}>{c.code} ({c.symbol})</option>
-                    )
-                  ))}
-                </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={14} />
+                  <span className="text-[13px] font-black text-gray-900 dark:text-white truncate">
+                    {hook.currency} ({CURRENCIES.find(c => c.code === hook.currency)?.symbol || "$"})
+                  </span>
+                  <ChevronDown className={cn("text-gray-400 transition-transform duration-300", isOpen && "rotate-180")} size={14} />
+                </div>
+
+                {/* Dropdown Menu */}
+                {isOpen && (
+                  <div className="absolute top-[110%] left-0 w-64 bg-white dark:bg-gray-950 border border-gray-200 dark:border-gray-800 rounded-2xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 z-50">
+                    <div className="p-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50">
+                      <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+                        <input 
+                          type="text"
+                          autoFocus
+                          placeholder="Search currency..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="w-full pl-9 pr-4 py-2 bg-white dark:bg-gray-800 rounded-xl text-xs font-bold outline-none border border-gray-200 dark:border-gray-700 focus:border-blue-500 transition-all text-gray-900 dark:text-white"
+                        />
+                      </div>
+                    </div>
+                    <div className="max-h-60 overflow-y-auto custom-scrollbar">
+                      {filteredCurrencies.map((c) => (
+                        <div
+                          key={c.code}
+                          onClick={() => {
+                            hook.setCurrency(c.code);
+                            setIsOpen(false);
+                            setSearchTerm("");
+                          }}
+                          className={cn(
+                            "px-4 py-3 text-[11px] font-black flex items-center justify-between cursor-pointer transition-all",
+                            // Fix: High contrast hover and selection
+                            "hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 dark:hover:text-white", 
+                            hook.currency === c.code 
+                              ? "bg-blue-50 text-blue-600 dark:bg-blue-600/20 dark:text-blue-400" 
+                              : "text-gray-700 dark:text-gray-300"
+                          )}
+                        >
+                          <span className="truncate">{c.code} — {c.name}</span>
+                          <span className="ml-2 opacity-60 text-[10px]">{c.symbol}</span>
+                        </div>
+                      ))}
+                      {filteredCurrencies.length === 0 && (
+                        <div className="px-4 py-8 text-center text-gray-500 text-[10px] font-black uppercase tracking-widest">
+                          No Results Found
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
+
+              {/* Price Input Field */}
               <input
                 type="number"
                 value={hook.salePrice}
                 onChange={(e) => hook.setSalePrice(e.target.value)}
-                placeholder="e.g. 200"
-                className="flex-1 px-4 py-3 rounded-r-2xl border border-gray-200 border-l-0 bg-white text-[13px] font-bold outline-none transition duration-200 focus:border-blue-600 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
+                placeholder="0.00"
+                className="flex-1 w-full h-full px-4 rounded-r-2xl border border-gray-200 border-l-0 bg-white text-[13px] font-black outline-none transition duration-200 focus:border-blue-600 dark:bg-gray-900 dark:border-gray-700 dark:text-gray-100"
               />
             </div>
           </div>
         </div>
 
         <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-700 dark:text-amber-500 text-xs font-semibold leading-relaxed mt-4">
-          Transferring this warranty will permanently update the NFT owner on-chain. This action is irreversible. Active claims must be resolved before transfer.
+          Transferring this warranty will permanently update the NFT owner on-chain. This action is irreversible.
         </div>
       </div>
 
